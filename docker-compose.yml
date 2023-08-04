@@ -1,0 +1,24 @@
+version: "3.7"
+services:
+  komodo-relay:
+    build: .
+    image: komodo-relay:latest
+    container_name: komodo-relay
+    restart: "always"
+    volumes: 
+        - ../captures:/komodo/captures
+    labels:
+      - "traefik.frontend.rule=Host:relay.komodo-dev.library.illinois.edu"
+      - "traefik.backend=komodo-relay"
+      - "traefik.port=3000"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+    networks: 
+      - proxy
+      - komodo_internal
+
+networks: 
+  proxy:
+    external: true
+  komodo_internal:
+    external: true
