@@ -112,13 +112,16 @@ const options = {
   const server = https.createServer(options, (req, res) => {
     // Use the cors() middleware to set up CORS headers for this request
     cors({
-        origin: '*'
+        origin: '*:*'
       })(req, res, () => {
     });
     
   });
 
   const io = socketIO(server);
+  // Configure CORS for Socket.IO connections
+  io.origins('*:*'); // Allow all origins for Socket.IO
+
   //const io = socketIO.listen(server); // Corrected line
 
 
