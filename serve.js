@@ -113,7 +113,8 @@ const options = {
     cors: {
 
    // origin: '*',
-   origin: "https://appsocket.net:3000",   //"https://komodo-impress.web.app"],
+   origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app"],
+      //"https://komodo-impress.web.app"],
    credentials: true
 
   },});
