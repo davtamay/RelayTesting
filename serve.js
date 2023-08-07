@@ -49,6 +49,8 @@ const config = require('./config');
 
 const cors = require('cors');
 
+
+
 const fs = require('fs');
 
 const path = require('path');
@@ -109,7 +111,9 @@ const options = {
   
   const server = https.createServer(options, (req, res) => {
     // Use the cors() middleware to set up CORS headers for this request
-    cors()(req, res, () => {
+    cors({
+        origin: '*'
+      })(req, res, () => {
     });
     
   });
