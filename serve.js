@@ -35,7 +35,7 @@
 
 const https = require('https');
 
-const io  = require('socket.io')(https);
+const socketIO  = require('socket.io');
 
 const mysql = require('mysql2');
 
@@ -102,13 +102,14 @@ const options = {
     cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
     ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
   
-    secureProtocol: 'TLSv1_2_method',
+  //  secureProtocol: 'TLSv1_2_method',
     requestCert: false,
     rejectUnauthorized: false
   };
   
   const server = https.createServer(options);
 
+  const io = socketIO(server);
   //const io = socketIO.listen(server); // Corrected line
 
 
