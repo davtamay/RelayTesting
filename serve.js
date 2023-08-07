@@ -113,8 +113,8 @@ const options = {
     cors: {
 
    // origin: '*',
-   origin: "https://komodo-impress.web.app"
-    //credentials: false
+   origin: ["https://komodo-impress.web.app"],
+   credentials: true
 
   },});
 
