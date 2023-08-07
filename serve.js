@@ -33,7 +33,9 @@
 
 /* jshint esversion: 6 */
 
-const io = require('socket.io')();
+const https = require('https');
+
+const io  = require('socket.io')(https);
 
 const mysql = require('mysql2');
 
@@ -45,6 +47,11 @@ const adminServer = require('./admin');
 
 const config = require('./config');
 
+
+
+const fs = require('fs');
+
+const path = require('path');
 // set up logging
 const { createLogger, format, transports } = require('winston');
 
@@ -87,10 +94,28 @@ if (config.db.host && config.db.host != "") {
     if (logger) logger.info(`Database pool created: host: ${config.db.host}, database: ${config.db.database}.`);
 }
 
+
+
+
+const options = {
+    key: fs.readFileSync('../certs/appsocket.net-key.pem'),
+    cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
+    ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
+  
+    secureProtocol: 'TLSv1_2_method',
+    requestCert: false,
+    rejectUnauthorized: false
+  };
+  
+  const server = https.createServer(options);
+
+  //const io = socketIO.listen(server); // Corrected line
+
+
 // relay server
 const PORT = 3000;
 
-io.listen(PORT, {
+server.listen(PORT, {
     upgradeTimeout: 1000,
     pingTimeout: 30000
 });

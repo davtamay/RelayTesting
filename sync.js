@@ -77,7 +77,7 @@ const SYNC_OBJECTS = 3;
 
 const STATE_VERSION = 2;
 
-const SERVER_NAME = "Komodo Dev (IL)";
+const SERVER_NAME = "Dev Server";
 
 const SYNC_NAMESPACE = "/sync";
 
