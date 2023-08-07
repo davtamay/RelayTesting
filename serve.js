@@ -113,7 +113,7 @@ const options = {
     cors: {
 
    // origin: '*',
-   origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app", "https://flightbag.com" ],
+   origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app", "https://www.flightbag.com" ],
       //"https://komodo-impress.web.app"],
    credentials: true
 
