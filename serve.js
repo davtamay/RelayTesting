@@ -109,18 +109,12 @@ const options = {
     rejectUnauthorized: false
   };
   
-  const server = https.createServer(options, (req, res) => {
-    // Use the cors() middleware to set up CORS headers for this request
-    cors({
-        origin: '*:*'
-      })(req, res, () => {
-    });
-    
-  });
+  const server = https.createServer(options);
 
   const io = socketIO(server, {
     cors: {
-    origin: '*:*',
+    origin: '*',
+
   },});
 
   //const io = socketIO.listen(server); // Corrected line
