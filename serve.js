@@ -118,9 +118,10 @@ const options = {
     
   });
 
-  const io = socketIO(server);
-  // Configure CORS for Socket.IO connections
-  io.origins('*:*'); // Allow all origins for Socket.IO
+  const io = socketIO(server, {
+    cors: {
+    origin: '*:*',
+  },});
 
   //const io = socketIO.listen(server); // Corrected line
 
