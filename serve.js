@@ -47,7 +47,7 @@ const adminServer = require('./admin');
 
 const config = require('./config');
 
-
+const cors = require('cors');
 
 const fs = require('fs');
 
@@ -107,7 +107,12 @@ const options = {
     rejectUnauthorized: false
   };
   
-  const server = https.createServer(options);
+  const server = https.createServer(options, (req, res) => {
+    // Use the cors() middleware to set up CORS headers for this request
+    cors()(req, res, () => {
+    });
+    
+  });
 
   const io = socketIO(server);
   //const io = socketIO.listen(server); // Corrected line
