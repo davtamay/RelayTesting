@@ -111,9 +111,10 @@ const options = {
   const io =  new socketIO.Server(server, 
     {
     cors: {
-        
-    origin: '*',
-    credentials: false
+
+   // origin: '*',
+   origin: "https://komodo-impress.web.app"
+    //credentials: false
 
   },});
 
