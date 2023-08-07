@@ -111,7 +111,9 @@ const options = {
   const io =  new socketIO.Server(server, 
     {
     cors: {
+        
     origin: '*',
+    credentials: false
 
   },});
 
