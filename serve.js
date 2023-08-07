@@ -47,10 +47,6 @@ const adminServer = require('./admin');
 
 const config = require('./config');
 
-const cors = require('cors');
-
-
-
 const fs = require('fs');
 
 const path = require('path');
@@ -111,7 +107,7 @@ const options = {
   
   const server = https.createServer(options);
 
-  const io = socketIO(server, {
+  const io = new socketIO(server, {
     cors: {
     origin: '*',
 
