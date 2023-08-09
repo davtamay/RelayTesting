@@ -37,6 +37,8 @@ const https = require('https');
 
 const socketIO  = require('socket.io');
 
+const { instrument } = require("@socket.io/admin-ui");
+
 const mysql = require('mysql2');
 
 const syncServer = require('./sync');
@@ -118,6 +120,11 @@ const options = {
    credentials: true
 
   },});
+
+  instrument(io, {
+    auth: false,
+    mode: "development",
+  });
 
   //const io = socketIO.listen(server); // Corrected line
 
