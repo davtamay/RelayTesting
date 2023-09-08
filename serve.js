@@ -33,6 +33,7 @@
 
 /* jshint esversion: 6 */
 
+
 const https = require('https');
 
 const socketIO  = require('socket.io');
@@ -49,10 +50,8 @@ const adminServer = require('./admin');
 
 const config = require('./config');
 
-
 const fs = require('fs');
 
-const path = require('path');
 // set up logging
 const { createLogger, format, transports } = require('winston');
 
@@ -99,9 +98,13 @@ if (config.db.host && config.db.host != "") {
 
 
 const options = {
+  //production
     key: fs.readFileSync('../certs/appsocket.net-key.pem'),
     cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
     ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
+  //dev or set chrome flag to ignore cert errors - chrome://flags/#allow-insecure-localhost
+    // key: fs.readFileSync('../certs/key.pem'),
+    //  cert: fs.readFileSync('./certs/cert.pem'),
   
   //  secureProtocol: 'TLSv1_2_method',
     requestCert: false,
@@ -113,20 +116,17 @@ const options = {
   const io =  new socketIO.Server(server, 
     {
     cors: {
-
-   // origin: '*',
-   origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app", "https://www.flightbag.com" ],
-      //"https://komodo-impress.web.app"],
+      origin: '*',
+ //  origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app", "https://www.flightbag.com" ],
    credentials: true
 
   },});
 
+  
   instrument(io, {
     auth: false,
     mode: "development",
   });
-
-  //const io = socketIO.listen(server); // Corrected line
 
 
 // relay server
@@ -137,10 +137,11 @@ server.listen(PORT, {
     pingTimeout: 30000
 });
 
-if (logger) logger.info(`Komodo relay is running on :${PORT}`);
+if (logger) logger.info(` Dev relay is running on :${PORT}`);
 
 var chatNamespace = chatServer.init(io, logger);
 
 var adminNamespace = adminServer.init(io, logger, syncServer, chatServer);
+
 
 syncServer.init(io, pool, logger, chatNamespace, adminNamespace);

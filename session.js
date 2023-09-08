@@ -36,8 +36,15 @@
 class Session {
   constructor(id) {
     this.id = id;
+
+    this.name = '';
+
     this.sockets = {}; // socket.id -> client_id
     this.clients = [];
+    this.clientLatestPositions = [];
+    this.clientLatestRotations = [];
+
+
     this.entities = [];
     this.scene = null;
     this.isRecording = false;
@@ -129,6 +136,7 @@ class Session {
     ) {
       this.clients = [client_id];
 
+      
       return true;
     }
 
@@ -138,17 +146,27 @@ class Session {
   }
 
   removeClient(client_id) {
+    console.log(`removing client ${client_id} from session ${this.id}`)
     if (this.clients == null) {
       return false;
     }
 
     let index = this.clients.indexOf(client_id);
 
+    
+    //console.log("inded : " + index)
+   // let newPosition = [message.pos.x, message.pos.y, message.pos.z];
+   
+
+
+
+
     if (this.clients.length == 0 || this.clients.indexOf(client_id) == -1) {
       //client_id is not in the array, so we don't need to remove it.
       return false;
     }
-
+    this.clientLatestPositions.splice(index * 3,  3);
+    this.clientLatestRotations.splice(index * 4,  4);
     this.clients.splice(index, 1);
   }
 
@@ -168,13 +186,19 @@ class Session {
       return;
     }
 
+    var condition = 0;
+
     const first_instance = this.clients.indexOf(client_id);
 
     for (let i = 0; i < this.clients.length; i += 1) {
       if (i != first_instance && this.clients[i] == client_id) {
         this.clients.splice(i, 1);
+    //  console.log("duplicate client changing client_id : " + client_id );
+    //    condition = 1;
       }
     }
+
+    return condition;
   }
 
   hasClient (client_id) {

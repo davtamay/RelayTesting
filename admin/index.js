@@ -39,7 +39,7 @@
 
 // Tip: if you need to change this on-the-fly, you can edit this file without rebuilding. It's also possible to use the inspector to inspect the VR frame and call `window.RELAY_API_BASE_URL="<your-server-url>"`, if for some reason you need to do that in real time.
 
-var RELAY_BASE_URL = "https://appsocket.net:3000";//"https://localhost:3000"//"http://localhost:3000";
+var RELAY_BASE_URL = "https://localhost:3000";//"https://appsocket.net:3000";//"https://localhost:3000"//"http://localhost:3000";
 
 const pollInterval = 500; // how often to ask the relay server for stuff.
 
