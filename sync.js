@@ -53,6 +53,7 @@ const chat = require("./chat");
 const { debug } = require("console");
 const { ConsoleLoggingListener } = require("microsoft-cognitiveservices-speech-sdk/distrib/lib/src/common.browser/ConsoleLoggingListener");
 
+const crypto = require('crypto');
 // event data globals
 // NOTE(rob): deprecated.
 // const POS_FIELDS            = 14;
@@ -927,6 +928,9 @@ module.exports = {
         scene: session.scene,
         isRecording: session.isRecording,
       };
+
+     //  console.log(`state: ${JSON.stringify(state.entities)}`);
+
     } else {
       // version 1 or no api version indicated
 
@@ -2080,17 +2084,20 @@ module.exports = {
     return session.entities[i];
   },
 
-  applyShowInteractionToState: function (session, target_id) {
-    let foundEntity = this.getEntityFromState(session, target_id);
+  applyShowInteractionToState: function (session, message) {
+    console.log("apply show interaction to state" + message.guid);
+    let foundEntity = this.getEntityFromState(session, message.guid);
 
     if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${target_id} found. Creating one.`);
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.guid} found. Creating one.`);
 
         let entity = {
-            id: target_id,
+            id: message.guid,
+            guid: message.guid,
             latest: {},
-            render: true,
-            locked: false,
+            render: message.state,
+        //    locked: false,
+          //  guid: message.guid,
         };
 
         session.entities.push(entity);
@@ -2098,7 +2105,7 @@ module.exports = {
         return;
     }
 
-    foundEntity.render = true;
+    foundEntity.render = message.state;
   },
 
   applyHideInteractionToState: function (session, target_id) {
@@ -2122,17 +2129,19 @@ module.exports = {
     foundEntity.render = false;
   },
 
-  applyLockInteractionToState: function (session, target_id) {
-    let foundEntity = this.getEntityFromState(session, target_id);
+  applyLockInteractionToState: function (session, message) {
+
+    let foundEntity = this.getEntityFromState(session, message.guid);
 
     if (foundEntity == null) {
-        this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply lock interaction to state: no entity with target_id ${target_id} found. Creating one.`);
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.entityID} found. Creating one.`);
 
         let entity = {
-            id: target_id,
+            id: message.guid,
+            guid: message.guid,
             latest: {}, // TODO(Brandon): investigate this. data.message?
-            render: true,
-            locked: true,
+          //  render: true,
+            locked: message.state,
         };
 
         session.entities.push(entity);
@@ -2140,7 +2149,7 @@ module.exports = {
         return;
     }
 
-    foundEntity.locked = true;
+    foundEntity.locked = message.state;
   },
 
   applyUnlockInteractionToState: function (session, target_id) {
@@ -2164,6 +2173,32 @@ module.exports = {
     foundEntity.locked = false;
   },
 
+
+  applyNewAssetState: function (session, message) {
+    
+    let foundEntity = this.getEntityFromState(session, message.guid);
+
+    if (foundEntity == null) {
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${message.id} found. Creating one.`);
+
+        let entity = {
+            id: message.guid,
+            latest: message, // TODO(Brandon): investigate this. data.message?
+            render: true,
+            locked: false,
+            url: message.modelURL,
+            guid: message.guid,
+        };
+
+        session.entities.push(entity);
+
+        return;
+    }
+
+    foundEntity.locked = false;
+  },
+
+
   applyStartMoveInteractionToState: function (session, target_id) {
   },
 
@@ -2178,14 +2213,14 @@ module.exports = {
 
   applyInteractionMessageToState: function (session, target_id, interaction_type) {
     // entity should be rendered
-    if (interaction_type == INTERACTION_RENDER) {
-      this.applyShowInteractionToState(session, target_id);
-    }
+    // if (interaction_type == INTERACTION_RENDER) {
+    //   this.applyShowInteractionToState(session, target_id);
+    // }
 
-    // entity should stop being rendered
-    if (interaction_type == INTERACTION_RENDER_END) {
-      this.applyHideInteractionToState(session, target_id);
-    }
+    // // entity should stop being rendered
+    // if (interaction_type == INTERACTION_RENDER_END) {
+    //   this.applyHideInteractionToState(session, target_id);
+    // }
 
     // scene has changed
     if (interaction_type == INTERACTION_SCENE_CHANGE) {
@@ -2283,6 +2318,7 @@ module.exports = {
             latest: message,
             render: true,
             locked: false,
+        //    url: message.url,
         };
 
         session.entities.push(entity);
@@ -2467,6 +2503,19 @@ module.exports = {
 
       return;
     }
+
+    if(type == "asset") {
+      this.applyNewAssetState(session, message);
+    }
+
+    if(type == "render") {
+      this.applyShowInteractionToState(session, message);
+     // this.applyNewAssetState(session, message);
+    }
+    if(type == "lock") {
+      this.applyLockInteractionToState(session, message);
+    }
+
 
     // get reference to session and parse message payload for state updates, if needed.
     if (type == KomodoMessages.interaction.type) {
@@ -2714,10 +2763,24 @@ module.exports = {
       socket.emit(KomodoSendEvents.connectionError, message);
     };
 
+     //sendTo = -1 (To all including sender), 0 (To all Except sender), clientID (to target clientID)
     this.messageAction = function (socket, session_id, data) {
     //  console.log("SENDING message TO : " + session_id);
 
+    
+    
+    if(data.sendTo === 0)
       socket.broadcast.to(session_id.toString()).emit(KomodoSendEvents.message, data);
+    else if(data.sendTo === -1)
+    {
+   //   io.in(session_id.toString()).emit(KomodoSendEvents.message, data);
+      console.log("got message");
+      io.of(SYNC_NAMESPACE).to(session_id.toString()).emit(KomodoSendEvents.message, data);
+
+    }
+    else
+      socket.to(data.sendTo).emit(KomodoSendEvents.message, data);
+
     };
 
     this.notifyBumpAction = function (session_id, socket) {
@@ -2781,7 +2844,6 @@ module.exports = {
         `Processing request to join session.`
       );
 
-      console.log(`BEFORE ADDSOCKETANDCLIENT added client ${client_id}  to session ${session_id} - total in session: ${session.clients.size}`);
       
       self.addSocketAndClientToSession(
         "",
@@ -3188,7 +3250,45 @@ module.exports = {
         self.logErrorSessionClientSocketAction(null, null, socket.id || "null", err);
       });
 
+    //  console.log(crypto.randomUUID());
+      socket.on('request_serverUUID', () => {
+        
+        var uuid = crypto.randomUUID();
+
+        socket.emit('get_UUID', uuid);
+
+        console.log("UUID: " + uuid);
+        //1 is the lobby session
+        // var session = self.getOrCreateSession(1);
+        // let client_id = 1;
+        // let foundUniqueID = false;
       
+        // while (!foundUniqueID) {
+        //   // Check if any session has a client with the same ID
+        //   let isUnique = true;
+        //   for (let [sessionID, session] of self.sessions) {
+        //     if (session.hasClient(client_id)) {
+        //       isUnique = false;
+        //       break;
+        //     }
+        //   }
+      
+        //   // If the ID is unique, add the client to the session and exit the loop
+        //   if (isUnique) {
+        //     foundUniqueID = true;
+        //     self.addClientToSession(1, client_id);
+        //     socket.emit('get_clientID', client_id);
+        //   } else {
+        //     // If the ID is not unique, increment it and check again
+        //     client_id++;
+        //   }
+        // }
+
+
+
+      });
+
+
 
       socket.on('request_clientID', () => {
         
@@ -3331,6 +3431,7 @@ module.exports = {
             return {
                 id: session.id,
                 name: session.name,
+                clients: session.getClients(),//session.getClients().length,
                 date: session.date,
             };
         });
