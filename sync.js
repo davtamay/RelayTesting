@@ -766,7 +766,7 @@ module.exports = {
     if (entity_type == 3) {
       let entity_id = data[3];
 
-      let i = session.entities.findIndex((e) => e.id == entity_id);
+      let i = session.entities.findIndex((e) => e.guid == entity_id);
 
       if (i != -1) {
         session.entities[i].latest = data;
