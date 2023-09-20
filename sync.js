@@ -2214,6 +2214,9 @@ module.exports = {
                //modeldata_url = 1, primitive = 2, drawing = 3
             modelType: 2,
             guid: message.guid,
+            latest: {pos: message.pos, rot: message.rot }
+            // pos: message.pos,
+            // rot: message.rot,
          //   latest: message, // TODO(Brandon): investigate this. data.message?
             // render: true,
             // locked: false,
