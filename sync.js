@@ -2135,7 +2135,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.entityID} found. Creating one.`);
 
         let entity = {
-          guid: message.guid,
+         // guid: message.guid,
             guid: message.guid,
             latest: {}, // TODO(Brandon): investigate this. data.message?
           //  render: true,
@@ -2150,26 +2150,26 @@ module.exports = {
     foundEntity.locked = message.state;
   },
 
-  applyUnlockInteractionToState: function (session, target_id) {
-    let foundEntity = this.getEntityFromState(session, target_id);
+  // applyUnlockInteractionToState: function (session, target_id) {
+  //   let foundEntity = this.getEntityFromState(session, target_id);
 
-    if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${target_id} found. Creating one.`);
+  //   if (foundEntity == null) {
+  //     this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${target_id} found. Creating one.`);
 
-        let entity = {
-          guid: target_id,
-            latest: {}, // TODO(Brandon): investigate this. data.message?
-            render: true,
-            locked: false,
-        };
+  //       let entity = {
+  //         guid: target_id,
+  //           latest: {}, // TODO(Brandon): investigate this. data.message?
+  //           render: true,
+  //           locked: false,
+  //       };
 
-        session.entities.push(entity);
+  //       session.entities.push(entity);
 
-        return;
-    }
+  //       return;
+  //   }
 
-    foundEntity.locked = false;
-  },
+  //   foundEntity.locked = false;
+  // },
 
 
   applyNewAssetState: function (session, message) {
@@ -2185,7 +2185,7 @@ module.exports = {
             modelType: 1,
 
             guid: message.guid,
-            latest: message, // TODO(Brandon): investigate this. data.message?
+           // latest: message, // TODO(Brandon): investigate this. data.message?
             render: true,
             locked: false,
             url: message.modelURL,
@@ -2196,8 +2196,10 @@ module.exports = {
         return;
     }
     
+    foundEntity.modelType = 1;
+    foundEntity.guid = message.guid;
+    foundEntity.url = message.modelURL;
 
-    foundEntity.locked = false;
   },
 
   applyPrimitiveState: function (session, message) {
@@ -2212,11 +2214,11 @@ module.exports = {
                //modeldata_url = 1, primitive = 2, drawing = 3
             modelType: 2,
             guid: message.guid,
-            latest: message, // TODO(Brandon): investigate this. data.message?
-            render: true,
-            locked: false,
-            
-            indentifier : message.primitiveType,
+         //   latest: message, // TODO(Brandon): investigate this. data.message?
+            // render: true,
+            // locked: false,
+
+            indentifier : message.indentifier,
             // url: message.modelURL,
             // guid: message.guid,
         };
@@ -2225,9 +2227,11 @@ module.exports = {
 
         return;
     }
-    
+    foundEntity.modelType = 2;
+    foundEntity.guid = message.guid;
+    foundEntity.url = message.modelURL;
 
-    foundEntity.locked = false;
+   // foundEntity.locked = false;
   },
 
   applyStartMoveInteractionToState: function (session, target_id) {
@@ -2258,15 +2262,15 @@ module.exports = {
         session.scene = target_id;
     }
 
-    // entity is locked
-    if (interaction_type == INTERACTION_LOCK) {
-      this.applyLockInteractionToState(session, target_id);
-    }
+    // // entity is locked
+    // if (interaction_type == INTERACTION_LOCK) {
+    //   this.applyLockInteractionToState(session, target_id);
+    // }
 
-    // entity is unlocked
-    if (interaction_type == INTERACTION_LOCK_END) {
-      this.applyUnlockInteractionToState(session, target_id);
-    }
+    // // entity is unlocked
+    // if (interaction_type == INTERACTION_LOCK_END) {
+    //   this.applyUnlockInteractionToState(session, target_id);
+    // }
   },
 
   applyObjectsSyncPackedArrayToState: function (session, packedArray) {
