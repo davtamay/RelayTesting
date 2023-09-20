@@ -2215,7 +2215,7 @@ module.exports = {
                //modeldata_url = 1, primitive = 2, drawing = 3
             modelType: 2,
             guid: message.guid,
-            latest: {pos: message.pos, rot: message.rot },
+            latest: {pos: message.pos, rot: message.rot, scaleFactor: message.scaleFactor},
             indentifier : message.indentifier,
           
         };
