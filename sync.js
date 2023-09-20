@@ -772,7 +772,7 @@ module.exports = {
         session.entities[i].latest = data;
       } else {
         let entity = {
-          id: entity_id,
+          guid: entity_id,
           latest: data,
           render: true,
           locked: false,
@@ -812,7 +812,7 @@ module.exports = {
           session.entities[i].render = true;
         } else {
           let entity = {
-            id: target_id,
+            guid: target_id,
             latest: [],
             render: true,
             locked: false,
@@ -828,7 +828,7 @@ module.exports = {
           session.entities[i].render = false;
         } else {
           let entity = {
-            id: target_id,
+            guid: target_id,
             latest: data,
             render: false,
             locked: false,
@@ -849,7 +849,7 @@ module.exports = {
           session.entities[i].locked = true;
         } else {
           let entity = {
-            id: target_id,
+            guid: target_id,
             latest: [],
             render: false,
             locked: true,
@@ -865,7 +865,7 @@ module.exports = {
           session.entities[i].locked = false;
         } else {
           let entity = {
-            id: target_id,
+            guid: target_id,
             latest: [],
             render: false,
             locked: false,
@@ -920,8 +920,6 @@ module.exports = {
         
         latestClientPositions: session.clientLatestPositions,
         latestClientRotations: session.clientLatestRotations,
-
-
 
 
         entities: session.entities,
@@ -2092,7 +2090,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.guid} found. Creating one.`);
 
         let entity = {
-            id: message.guid,
+          //  id: message.guid,
             guid: message.guid,
             latest: {},
             render: message.state,
@@ -2115,7 +2113,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply hide interaction to state: no entity with target_id ${target_id} found. Creating one.`);
 
         let entity = {
-            id: target_id,
+          guid: target_id,
             latest: {},
             render: false,
             locked: false,
@@ -2137,7 +2135,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.entityID} found. Creating one.`);
 
         let entity = {
-            id: message.guid,
+          guid: message.guid,
             guid: message.guid,
             latest: {}, // TODO(Brandon): investigate this. data.message?
           //  render: true,
@@ -2159,7 +2157,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${target_id} found. Creating one.`);
 
         let entity = {
-            id: target_id,
+          guid: target_id,
             latest: {}, // TODO(Brandon): investigate this. data.message?
             render: true,
             locked: false,
@@ -2182,22 +2180,55 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${message.id} found. Creating one.`);
 
         let entity = {
-            id: message.guid,
+          //  id: message.guid,
+           //modeldata_url = 1, primitive = 2, drawing = 3
+            modelType: 1,
+
+            guid: message.guid,
             latest: message, // TODO(Brandon): investigate this. data.message?
             render: true,
             locked: false,
             url: message.modelURL,
-            guid: message.guid,
         };
 
         session.entities.push(entity);
 
         return;
     }
+    
 
     foundEntity.locked = false;
   },
 
+  applyPrimitiveState: function (session, message) {
+    
+    let foundEntity = this.getEntityFromState(session, message.guid);
+
+    if (foundEntity == null) {
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply unlock interaction to state: no entity with target_id ${message.id} found. Creating one.`);
+
+        let entity = {
+
+               //modeldata_url = 1, primitive = 2, drawing = 3
+            modelType: 2,
+            guid: message.guid,
+            latest: message, // TODO(Brandon): investigate this. data.message?
+            render: true,
+            locked: false,
+            
+            indentifier : message.primitiveType,
+            // url: message.modelURL,
+            // guid: message.guid,
+        };
+
+        session.entities.push(entity);
+
+        return;
+    }
+    
+
+    foundEntity.locked = false;
+  },
 
   applyStartMoveInteractionToState: function (session, target_id) {
   },
@@ -2247,7 +2278,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply sync message to state: no entity with target_id ${target_id} found. Creating one.`);
 
         let entity = {
-            id: entity_id,
+          guid: entity_id,
             latest: packedArray,
             render: true,
             locked: false,
@@ -2314,7 +2345,7 @@ module.exports = {
       this.logInfoSessionClientSocketAction(null, null, null, `Apply sync message to state: no entity with entityId ${message.entityId} found. Creating one.`);
 
         let entity = {
-            id: message.entityId,
+          guid: message.entityId,
             latest: message,
             render: true,
             locked: false,
@@ -2506,6 +2537,9 @@ module.exports = {
 
     if(type == "asset") {
       this.applyNewAssetState(session, message);
+    }
+    if(type == "primitive") {
+      this.applyPrimitiveState(session, message);
     }
 
     if(type == "render") {
