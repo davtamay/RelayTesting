@@ -153,7 +153,7 @@ const KomodoMessages = {
         type: "sync",
         minLength: 4, //TODO: what should this number be?
         indices: {
-            entityId: 3,
+            guid: 3,
             entityType: 4,
         },
     }
@@ -2132,7 +2132,7 @@ module.exports = {
     let foundEntity = this.getEntityFromState(session, message.guid);
 
     if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.entityID} found. Creating one.`);
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply show interaction to state: no entity with target_id ${message.guid} found. Creating one.`);
 
         let entity = {
          // guid: message.guid,
@@ -2274,7 +2274,7 @@ module.exports = {
   },
 
   applyObjectsSyncPackedArrayToState: function (session, packedArray) {
-    let entity_id = packedArray[KomodoMessages.sync.indices.entityId];
+    let entity_id = packedArray[KomodoMessages.sync.indices.guid];
 
     let foundEntity = this.getEntityFromState(session, entity_id);
 
@@ -2316,13 +2316,13 @@ module.exports = {
 
     //console.log(message.pos.x + " " + message.pos.y + " " + message.pos.z);
 
-    // let foundEntity = this.getEntityFromState(session, message.entityId);
+    // let foundEntity = this.getEntityFromState(session, message.guid);
 
     // if (foundEntity == null) {
-    //   this.logInfoSessionClientSocketAction(null, null, null, `Apply sync message to state: no entity with entityId ${message.entityId} found. Creating one.`);
+    //   this.logInfoSessionClientSocketAction(null, null, null, `Apply sync message to state: no entity with guid ${message.guid} found. Creating one.`);
 
     //     let entity = {
-    //         id: message.entityId,
+    //         id: message.guid,
     //         latest: message,
     //         render: true,
     //         locked: false,
@@ -2343,13 +2343,13 @@ module.exports = {
       return;
     }
 
-    let foundEntity = this.getEntityFromState(session, message.entityId);
+    let foundEntity = this.getEntityFromState(session, message.guid);
 
     if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction(null, null, null, `Apply sync message to state: no entity with entityId ${message.entityId} found. Creating one.`);
+      this.logInfoSessionClientSocketAction(null, null, null, `Apply sync message to state: no entity with guid ${message.guid} found. Creating one.`);
 
         let entity = {
-          guid: message.entityId,
+            guid: message.guid,
             latest: message,
             render: true,
             locked: false,
