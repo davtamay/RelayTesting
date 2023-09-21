@@ -2208,7 +2208,7 @@ module.exports = {
     let foundEntity = this.getEntityFromState(session, message.guid);
 
     if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new primitive state: no entity with target_id ${message.id} found. Creating one.`);
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new primitive state: no entity with target_id ${message.guid} found. Creating one.`);
 
         let entity = {
 
@@ -2229,6 +2229,34 @@ module.exports = {
     foundEntity.guid = message.guid;
     foundEntity.latest = {pos: message.pos, rot: message.rot };
     foundEntity.indentifier = message.indentifier;
+  
+  },
+
+  applyDrawState: function (session, message) {
+
+    let foundEntity = this.getEntityFromState(session, message.guid);
+
+    if (foundEntity == null) {
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new Draw state: no entity with target_id ${message.guid} found. Creating one.`);
+
+        let entity = {
+
+               //modeldata_url = 1, primitive = 2, drawing = 3
+            modelType: 3,
+            guid: message.guid,
+            drawEntity: {strokeType: message.strokeType, lineWidth: message.lineWidth, color: message.color, posArray: [message.pos]},
+          
+        };
+
+        session.entities.push(entity);
+
+        return;
+    }
+
+  
+    
+    foundEntity.drawEntity = {strokeType: message.strokeType,  lineWidth: message.lineWidth, color: message.color};
+    foundEntity.drawEntity.posArray.push(message.pos);
   
   },
 
@@ -2556,20 +2584,44 @@ module.exports = {
       return;
     }
 
-    if(type == "asset") {
-      this.applyNewAssetState(session, message);
-    }
-    if(type == "primitive") {
-      this.applyPrimitiveState(session, message);
+    switch (type) {
+    
+      case "asset":
+        this.applyNewAssetState(session, message);
+        break;
+
+      case "primitive":
+        this.applyPrimitiveState(session, message);
+        break;
+
+      case "render":
+        this.applyShowInteractionToState(session, message);
+        break;
+
+      case "lock":
+        this.applyLockInteractionToState(session, message);
+        break;
+
+      case "draw":
+        this.applyDrawState(session, message);
+        break;
+
     }
 
-    if(type == "render") {
-      this.applyShowInteractionToState(session, message);
-     // this.applyNewAssetState(session, message);
-    }
-    if(type == "lock") {
-      this.applyLockInteractionToState(session, message);
-    }
+    // if(type == "asset") {
+    //   this.applyNewAssetState(session, message);
+    // }
+    // if(type == "primitive") {
+    //   this.applyPrimitiveState(session, message);
+    // }
+
+    // if(type == "render") {
+    //   this.applyShowInteractionToState(session, message);
+    //  // this.applyNewAssetState(session, message);
+    // }
+    // if(type == "lock") {
+    //   this.applyLockInteractionToState(session, message);
+    // }
 
 
     // get reference to session and parse message payload for state updates, if needed.
