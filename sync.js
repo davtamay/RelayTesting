@@ -2248,11 +2248,11 @@ module.exports = {
               strokeType: message.strokeType, 
               lineWidth: message.lineWidth, 
               color: message.color, 
-              posArray: []
+              posArray: [message.pos]
             },
           
         };
-        entity.drawEntity.posArray.push(message.pos);
+    //    entity.drawEntity.posArray.push(message.pos);
 
         session.entities.push(entity);
 
@@ -2260,9 +2260,16 @@ module.exports = {
     }
 
   
-    
-    foundEntity.drawEntity = {strokeType: message.strokeType,  lineWidth: message.lineWidth, color: message.color};
+    //add new pos to array
     foundEntity.drawEntity.posArray.push(message.pos);
+
+    foundEntity.drawEntity = {
+      strokeType: message.strokeType,  
+      lineWidth: message.lineWidth, 
+      color: message.color,
+      posArray: foundEntity.drawEntity.posArray
+    
+    };
   
   },
 
