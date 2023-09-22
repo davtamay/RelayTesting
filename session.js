@@ -46,7 +46,7 @@ class Session {
 
 
     this.entities = [];
-    this.scene = null;
+    this.scene = 0;
     this.isRecording = false;
     this.start = Date.now();
     this.recordingStart = 0;
