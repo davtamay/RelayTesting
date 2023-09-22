@@ -2244,9 +2244,15 @@ module.exports = {
                //modeldata_url = 1, primitive = 2, drawing = 3
             modelType: 3,
             guid: message.guid,
-            drawEntity: {strokeType: message.strokeType, lineWidth: message.lineWidth, color: message.color, posArray: [message.pos]},
+            drawEntity: {
+              strokeType: message.strokeType, 
+              lineWidth: message.lineWidth, 
+              color: message.color, 
+              posArray: []
+            },
           
         };
+        entity.drawEntity.posArray.push(message.pos);
 
         session.entities.push(entity);
 
