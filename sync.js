@@ -2203,6 +2203,35 @@ module.exports = {
 
   },
 
+  applyNewChildAssetState: function (session, message) {
+
+    let foundEntity = this.getEntityFromState(session, message.guid);
+
+    if (foundEntity == null) {
+      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new asset import state: no entity with target_id ${message.guid} found. Creating one.`);
+
+        let entity = {
+        
+            modelType: 1,
+
+            guid: message.guid,
+            latest: message, // TODO(Brandon): investigate this. data.message?
+            render: true,
+            locked: false,
+          //  url: message.modelURL,
+        };
+
+        session.entities.push(entity);
+
+        return;
+    }
+
+    foundEntity.modelType = 1;
+    foundEntity.guid = message.guid;
+ //   foundEntity.url = message.modelURL;
+
+  },
+
   applyPrimitiveState: function (session, message) {
 
     let foundEntity = this.getEntityFromState(session, message.guid);
@@ -2578,17 +2607,17 @@ module.exports = {
   },
 
   // Not currently used.
-  applySyncPackedArrayToState: function(data, type, packedArray, session_id, client_id, socket) {
-    let entity_type = data.message[KomodoMessages.sync.indices.entityType];
+  // applySyncPackedArrayToState: function(data, type, packedArray, session_id, client_id, socket) {
+  //   let entity_type = data.message[KomodoMessages.sync.indices.entityType];
 
-    if (entity_type == null) {
-      this.logErrorSessionClientSocketAction(null, null, null, JSON.stringify(data.message));
-    }
+  //   if (entity_type == null) {
+  //     this.logErrorSessionClientSocketAction(null, null, null, JSON.stringify(data.message));
+  //   }
 
-    if (entity_type == SYNC_OBJECTS) {
-      this.applyObjectsSyncToState(session, data);
-    }
-  },
+  //   if (entity_type == SYNC_OBJECTS) {
+  //     this.applyObjectsSyncToState(session, data);
+  //   }
+  // },
 
   applyMessageToState: function (data, type, message, session, client_id, socket) {
     if (message == null) {
@@ -2601,6 +2630,10 @@ module.exports = {
     
       case "asset":
         this.applyNewAssetState(session, message);
+        break;
+
+      case "decomposedAsset":
+        this.applyNewChildAssetState(session, message);
         break;
 
       case "primitive":
@@ -2621,20 +2654,6 @@ module.exports = {
 
     }
 
-    // if(type == "asset") {
-    //   this.applyNewAssetState(session, message);
-    // }
-    // if(type == "primitive") {
-    //   this.applyPrimitiveState(session, message);
-    // }
-
-    // if(type == "render") {
-    //   this.applyShowInteractionToState(session, message);
-    //  // this.applyNewAssetState(session, message);
-    // }
-    // if(type == "lock") {
-    //   this.applyLockInteractionToState(session, message);
-    // }
 
 
     // get reference to session and parse message payload for state updates, if needed.
@@ -2883,23 +2902,34 @@ module.exports = {
       socket.emit(KomodoSendEvents.connectionError, message);
     };
 
-     //sendTo = -1 (To all including sender), 0 (To all Except sender), clientID (to target clientID)
+     //sendTo = 
+     // -2 just update state, 
+     // -1 (send to all including sender), 
+     // 0 (To all Except sender), 
+     // clientID (to target clientID)
     this.messageAction = function (socket, session_id, data) {
     //  console.log("SENDING message TO : " + session_id);
 
 
 
+
     if(data.sendTo === 0)
+    {
       socket.broadcast.to(session_id.toString()).emit(KomodoSendEvents.message, data);
+    }
+    else if(data.sendTo === -2)
+    {
+      //no action
+      return;
+    }
     else if(data.sendTo === -1)
     {
-   //   io.in(session_id.toString()).emit(KomodoSendEvents.message, data);
-      console.log("got message");
       io.of(SYNC_NAMESPACE).to(session_id.toString()).emit(KomodoSendEvents.message, data);
-
     }
     else
+    { 
       socket.to(data.sendTo).emit(KomodoSendEvents.message, data);
+    }
 
     };
 
