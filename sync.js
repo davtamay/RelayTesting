@@ -899,6 +899,38 @@ module.exports = {
     }
   },
 
+
+//   GetDrawStroke: function (session, message) {
+
+//     let foundEntity = this.getEntityFromState(session, message.guid);
+
+    
+//     // if (foundEntity == null) {
+//     //   this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new Draw state: no entity with target_id ${message.guid} found. Creating one.`);
+
+//     //     let entity = {
+
+//     //            //modeldata_url = 1, primitive = 2, drawing = 3
+//     //         modelType: 3,
+//     //         guid: message.guid,
+//     //         drawEntity: {
+//     //           strokeType: message.strokeType, 
+//     //           lineWidth: message.lineWidth, 
+//     //           color: message.color, 
+//     //           posArray: [message.pos]
+//     //         },
+          
+//     //     };
+//     // //    entity.drawEntity.posArray.push(message.pos);
+
+//     //     session.entities.push(entity);
+
+//     //     return;
+//     // }
+//   }
+// ,
+
+
   getState: function (socket, session_id, version) {
     let session = this.sessions.get(session_id);
 
@@ -957,6 +989,56 @@ module.exports = {
     return state;
   },
 
+
+  getGUIDs: function (socket, session_id, version) {
+    let session = this.sessions.get(session_id);
+
+    if (!session) {
+      this.stateErrorAction(
+        socket,
+        "The session was null, so no state could be found."
+      );
+
+      return { session_id: -1, entityData: null };
+    }
+
+
+    let guidData = {};
+  //   let session = self.sessions.get(session_id); // self.sessions.get(session_id);
+
+  //   console.log("Clients In Session sID and cID: " + session_id + "  " + session.getClients().length);
+
+  // //  this.clientInfoDataMap.forEach((value,key) => { console.log(`inInfoDataMapkey : ${this.clientInfoDataMap.get(key).getId()}`); });
+
+  //   var clientsInSession = session.getClients();
+
+  //   if (session) {
+  //     for (let clientID of clientsInSession) {
+  //       let clientInfo = this.clientInfoDataMap.get(clientID);
+
+  //       if (clientInfo) {
+  
+  //         console.log("Client Data NAMES: " + clientInfo.getId() + " " + clientInfo.getName());
+  //       }else
+  //       console.log("NO Client Data NAMES FOUND: " + clientID + " " + clientInfo);
+
+  //     }
+
+
+
+
+
+ // let guidData = new Map();
+
+
+     session.entities.map(entity => //(
+      {
+      guidData[entity.guid] = entity.modelType;
+      }
+      );
+    return guidData;
+  },
+
   handleStateCatchupRequest: function (socket, data) {
     if (!socket) {
       this.logErrorSessionClientSocketAction(
@@ -1007,6 +1089,79 @@ module.exports = {
       state: this.getState(socket, session_id, version)
     };
   },
+
+
+
+
+
+
+
+  handleGUIDRequest: function (socket, data) {
+    if (!socket) {
+      this.logErrorSessionClientSocketAction(
+        null,
+        null,
+        null,
+        `tried to handle guids, but socket was null`
+      );
+
+      return { //session_id: -1, 
+        guids: null };
+    }
+
+    if (!data) {
+      this.logErrorSessionClientSocketAction(
+        null,
+        null,
+        socket.id,
+        `tried to handle guids, but data was null`
+      );
+
+      return { //session_id: -1, 
+        guids: null };
+    }
+
+    let session_id = data.session_id;
+
+    let client_id = data.client_id;
+
+    let version = data.version;
+
+    this.logInfoSessionClientSocketAction(
+      session_id,
+      client_id,
+      socket.id,
+      `Received guids catch-up request, version ${data.version}`
+    );
+
+    if (!session_id || !client_id) {
+      this.connectionAuthorizationErrorAction(
+        socket,
+        "You must provide a session ID and a client ID in the URL options."
+      );
+
+      return { //session_id: -1, 
+        guids: null };
+    }
+
+    return {
+     // session_id: session_id,
+      guids: this.getGUIDs(socket, session_id, version)
+    };
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // returns true on success and false on failure
   addClientToSession: function (session_id, client_id) {
@@ -2262,6 +2417,8 @@ module.exports = {
   
   },
 
+
+
   applyDrawState: function (session, message) {
 
     let foundEntity = this.getEntityFromState(session, message.guid);
@@ -2275,6 +2432,7 @@ module.exports = {
             modelType: 3,
             guid: message.guid,
             drawEntity: {
+              guid: message.guid,
               strokeType: message.strokeType, 
               lineWidth: message.lineWidth, 
               color: message.color, 
@@ -3007,6 +3165,8 @@ module.exports = {
       io.in(socket.id).socketsJoin(session_id.toString());
 
 
+
+
     //   socket.join(session_id.toString(), (err) => {
     //     console.log(`after ADDSOCKETANDCLIENT added client ${client_id}  to session ${session_id} - total in session: ${session.clients.size}`);
 
@@ -3236,7 +3396,10 @@ module.exports = {
 
       // When a client requests a state catch-up, send the current session state. Supports versioning.
       socket.on(KomodoReceiveEvents.requestOwnStateCatchup, function (data) {
+       
         let { session_id, state } = self.handleStateCatchupRequest(socket, data);
+
+        let {guids}  = self.handleGUIDRequest(socket, data);
 
 
         // if(!state)
@@ -3264,6 +3427,9 @@ module.exports = {
         try {
           // emit versioned state data
           socket.emit(KomodoSendEvents.state, state); // Behavior as of 10/7/21: Sends the state only to the client who requested it.
+       
+          socket.emit( "session_guids",  guids);
+     
         } catch (err) {
           this.logErrorSessionClientSocketAction(
             session_id,
@@ -3438,6 +3604,82 @@ module.exports = {
 
 
       });
+
+      
+
+
+
+    socket.on('request_drawStroke', (session_id, guid) => {
+
+      var session = self.getOrCreateSession(session_id);
+
+      let foundEntity = self.getEntityFromState(session, guid);
+
+    //  foundEntity.drawEntity.guid = guid;
+
+      return foundEntity.drawEntity;
+      
+      
+      // {drawEntity: {
+      //                 guid: foundEntity.guid,
+      //                 strokeType: message.strokeType, 
+      //                 lineWidth: message.lineWidth, 
+      //                 color: message.color, 
+      //                 posArray: [message.pos]
+      //               }};
+    
+      //     // if (foundEntity == null) {
+      //     //   this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new Draw state: no entity with target_id ${message.guid} found. Creating one.`);
+      
+      //     //     let entity = {
+      
+      //     //            //modeldata_url = 1, primitive = 2, drawing = 3
+      //     //         modelType: 3,
+      //     //         guid: message.guid,
+      //     //         drawEntity: {
+      //     //           strokeType: message.strokeType, 
+      //     //           lineWidth: message.lineWidth, 
+      //     //           color: message.color, 
+      //     //           posArray: [message.pos]
+      //     //         },
+                
+      //     //     };
+      //     // //    entity.drawEntity.posArray.push(message.pos);
+      
+      //     //     session.entities.push(entity);
+      
+      //     //     return;
+        //1 is the lobby session
+        // var session = self.getOrCreateSession(1);
+        // let client_id = 1;
+        // let foundUniqueID = false;
+
+        // while (!foundUniqueID) {
+        //   // Check if any session has a client with the same ID
+        //   let isUnique = true;
+        //   for (let [sessionID, session] of self.sessions) {
+        //     if (session.hasClient(client_id)) {
+        //       isUnique = false;
+        //       break;
+        //     }
+        //   }
+
+        //   // If the ID is unique, add the client to the session and exit the loop
+        //   if (isUnique) {
+        //     foundUniqueID = true;
+        //     self.addClientToSession(1, client_id);
+        //     socket.emit('get_clientID', client_id);
+        //   } else {
+        //     // If the ID is not unique, increment it and check again
+        //     client_id++;
+        //   }
+        // }
+
+
+
+
+      });
+
 
 
 
