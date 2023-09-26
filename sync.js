@@ -2186,7 +2186,7 @@ module.exports = {
             modelType: 1,
 
             guid: message.guid,
-           // latest: message, // TODO(Brandon): investigate this. data.message?
+            latest: message, // TODO(Brandon): investigate this. data.message?
             render: true,
             locked: false,
             url: message.modelURL,
@@ -2197,6 +2197,7 @@ module.exports = {
         return;
     }
 
+    foundEntity.latest = message;
     foundEntity.modelType = 1;
     foundEntity.guid = message.guid;
     foundEntity.url = message.modelURL;
