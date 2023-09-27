@@ -3609,16 +3609,18 @@ module.exports = {
 
 
 
-    socket.on('request_drawStroke', (session_id, guid) => {
+    socket.on('request_drawStroke', (data) => {
 
-      var session = self.getOrCreateSession(session_id);
+      var session = self.getOrCreateSession(data.session_id);
 
-      let foundEntity = self.getEntityFromState(session, guid);
+      let foundEntity = self.getEntityFromState(session, data.guid);
 
     //  foundEntity.drawEntity.guid = guid;
 
-      return foundEntity.drawEntity;
-      
+    console.log("providing Draw Stroke: " + foundEntity.guid);
+
+      socket.emit('provide_drawStroke', foundEntity.drawEntity);
+   //   return foundEntity.drawEntity;
       
       // {drawEntity: {
       //                 guid: foundEntity.guid,
