@@ -3615,7 +3615,7 @@ module.exports = {
 
       let foundEntity = self.getEntityFromState(session, data.guid);
 
-      foundEntity.drawEntity.guid = guid;
+      foundEntity.drawEntity.guid = data.guid;
 
     console.log("providing Draw Stroke: " + foundEntity.guid);
 
