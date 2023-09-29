@@ -2428,7 +2428,7 @@ module.exports = {
 
 
 
-  applyDrawState: function (session, message) {
+  applyDrawState: function (session, message, socket) {
 
     let foundEntity = this.getEntityFromState(session, message.guid);
 
@@ -2449,12 +2449,17 @@ module.exports = {
             },
           
         };
+
+        //check for end of stroke to save it to indexdb
+        if(message.strokeType == 11)
+           socket.broadcast.to(session.id.toString()).emit("draw_save_to_storage", entity.drawEntity);
     //    entity.drawEntity.posArray.push(message.pos);
 
         session.entities.push(entity);
 
         return;
     }
+
 
   
     //add new pos to array
@@ -2467,6 +2472,9 @@ module.exports = {
       posArray: foundEntity.drawEntity.posArray
     
     };
+
+    if(message.strokeType == 11)
+    socket.broadcast.to(session.id.toString()).emit("draw_save_to_storage", foundEntity.drawEntity);
   
   },
 
@@ -2817,7 +2825,7 @@ module.exports = {
         break;
 
       case "draw":
-        this.applyDrawState(session, message);
+        this.applyDrawState(session, message, socket);
         break;
 
     }
