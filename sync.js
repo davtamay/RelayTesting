@@ -945,6 +945,15 @@ module.exports = {
 
     let state = {};
 
+    let filteredEntities = session.entities.map(entity => ({
+      guid: entity.guid,
+      latest: entity.latest,
+      render: entity.render,
+      locked: entity.locked,
+      url: entity.url || null,
+      modelType: entity.modelType || null
+  }));
+
     // check requested api version
     if (version === 2) {
       state = {
@@ -954,7 +963,7 @@ module.exports = {
         latestClientRotations: session.clientLatestRotations,
 
 
-        entities: session.entities,
+        entities: filteredEntities,//session.entities,
         scene: session.scene,
         isRecording: session.isRecording,
       };
@@ -3617,68 +3626,9 @@ module.exports = {
 
       foundEntity.drawEntity.guid = data.guid;
 
-    console.log("providing Draw Stroke: " + foundEntity.guid);
+      console.log("providing Draw Stroke: " + foundEntity.guid);
 
       socket.emit('provide_drawStroke', foundEntity.drawEntity);
-   //   return foundEntity.drawEntity;
-      
-      // {drawEntity: {
-      //                 guid: foundEntity.guid,
-      //                 strokeType: message.strokeType, 
-      //                 lineWidth: message.lineWidth, 
-      //                 color: message.color, 
-      //                 posArray: [message.pos]
-      //               }};
-    
-      //     // if (foundEntity == null) {
-      //     //   this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new Draw state: no entity with target_id ${message.guid} found. Creating one.`);
-      
-      //     //     let entity = {
-      
-      //     //            //modeldata_url = 1, primitive = 2, drawing = 3
-      //     //         modelType: 3,
-      //     //         guid: message.guid,
-      //     //         drawEntity: {
-      //     //           strokeType: message.strokeType, 
-      //     //           lineWidth: message.lineWidth, 
-      //     //           color: message.color, 
-      //     //           posArray: [message.pos]
-      //     //         },
-                
-      //     //     };
-      //     // //    entity.drawEntity.posArray.push(message.pos);
-      
-      //     //     session.entities.push(entity);
-      
-      //     //     return;
-        //1 is the lobby session
-        // var session = self.getOrCreateSession(1);
-        // let client_id = 1;
-        // let foundUniqueID = false;
-
-        // while (!foundUniqueID) {
-        //   // Check if any session has a client with the same ID
-        //   let isUnique = true;
-        //   for (let [sessionID, session] of self.sessions) {
-        //     if (session.hasClient(client_id)) {
-        //       isUnique = false;
-        //       break;
-        //     }
-        //   }
-
-        //   // If the ID is unique, add the client to the session and exit the loop
-        //   if (isUnique) {
-        //     foundUniqueID = true;
-        //     self.addClientToSession(1, client_id);
-        //     socket.emit('get_clientID', client_id);
-        //   } else {
-        //     // If the ID is not unique, increment it and check again
-        //     client_id++;
-        //   }
-        // }
-
-
-
 
       });
 
