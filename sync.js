@@ -2441,7 +2441,7 @@ module.exports = {
             modelType: 3,
             guid: message.guid,
             drawEntity: {
-              guid: message.guid,
+              guid: message.guid.toString(),
               strokeType: message.strokeType, 
               lineWidth: message.lineWidth, 
               color: message.color, 
@@ -2469,7 +2469,7 @@ module.exports = {
     foundEntity.drawEntity.posArray.push(message.pos);
 
     foundEntity.drawEntity = {
-      guid : message.guid,
+      guid : message.guid.toString(),
       strokeType: message.strokeType,  
       lineWidth: message.lineWidth, 
       color: message.color,
