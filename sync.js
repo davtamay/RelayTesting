@@ -2454,7 +2454,7 @@ module.exports = {
         //check for end of stroke to save it to indexdb
         if(message.strokeType == 11){
            socket.broadcast.to(session.id.toString()).emit("draw_save_to_storage", entity.drawEntity);
-          console.log("1save to storage");
+        //  console.log("1save to storage");
         }
            //    entity.drawEntity.posArray.push(message.pos);
 
@@ -2469,18 +2469,19 @@ module.exports = {
     foundEntity.drawEntity.posArray.push(message.pos);
 
     foundEntity.drawEntity = {
+      guid : message.guid,
       strokeType: message.strokeType,  
       lineWidth: message.lineWidth, 
       color: message.color,
       posArray: foundEntity.drawEntity.posArray
     
     };
-    
-    console.log(message.strokeType);
+
+  //  console.log(message.strokeType);
 
     if(message.strokeType == 11)
     socket.broadcast.to(session.id.toString()).emit("draw_save_to_storage", foundEntity.drawEntity);
-    console.log("2 save to storage");
+   // console.log("2 save to storage");
   },
 
   applyStartMoveInteractionToState: function (session, target_id) {
