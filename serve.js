@@ -99,9 +99,16 @@ if (config.db.host && config.db.host != "") {
 
 const options = {
   //production
-    key: fs.readFileSync('../certs/appsocket.net-key.pem'),
-    cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
-    ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
+    // key: fs.readFileSync('../certs/appsocket.net-key.pem'),
+    // cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
+    //ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
+
+    key: fs.readFileSync('/etc/letsencrypt/live/appsocket.net/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/appsocket.net/fullchain.pem')
+
+
+
+
   //dev or set chrome flag to ignore cert errors - chrome://flags/#allow-insecure-localhost
     // key: fs.readFileSync('../certs/key.pem'),
     //  cert: fs.readFileSync('./certs/cert.pem'),
@@ -117,7 +124,7 @@ const options = {
     {
     cors: {
       origin: '*',
- //  origin: ["https://appsocket.net:3000", "https://komodo-impress.web.app", "https://www.flightbag.com" ],
+ //  origin: ["https://kmh4c4q5-5500.use.devtunnels.ms", "https://appsocket.net:3000", "https://komodo-impress.web.app", "https://www.flightbag.com" ],
    credentials: true
 
   },});
