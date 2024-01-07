@@ -103,8 +103,8 @@ const options = {
     // cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
     //ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
 
-    key: fs.readFileSync('/etc/letsencrypt/live/appsocket.net/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/appsocket.net/fullchain.pem'),
+    key: fs.readFileSync('./certs/privkey.pem'),
+    cert: fs.readFileSync('./certs/fullchain.pem'),
 
 
 
