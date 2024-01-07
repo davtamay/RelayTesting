@@ -110,7 +110,7 @@ const options = {
     // cert: fs.readFileSync('./certs/fullchain.pem'),
 
     key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath)
+    cert: fs.readFileSync(certPath),
 
 
 
