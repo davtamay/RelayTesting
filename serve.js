@@ -52,6 +52,8 @@ const config = require('./config');
 
 const fs = require('fs');
 
+const path = require('path');
+
 // set up logging
 const { createLogger, format, transports } = require('winston');
 
@@ -95,7 +97,8 @@ if (config.db.host && config.db.host != "") {
 }
 
 
-
+const keyPath = path.join(__dirname, 'certs', 'privkey.pem');
+const certPath = path.join(__dirname, 'certs', 'fullchain.pem');
 
 const options = {
   //production
@@ -103,8 +106,11 @@ const options = {
     // cert: fs.readFileSync('./certs/appsocket.net-crt.pem'),
     //ca: fs.readFileSync('./certs/appsocket.net-chain.pem'),
 
-    key: fs.readFileSync('./certs/privkey.pem'),
-    cert: fs.readFileSync('./certs/fullchain.pem'),
+    // key: fs.readFileSync('./certs/privkey.pem'),
+    // cert: fs.readFileSync('./certs/fullchain.pem'),
+
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath)
 
 
 
