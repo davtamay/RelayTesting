@@ -5,7 +5,7 @@
   "main": "serve.js",
   "scripts": {
     "test": "nyc mocha --debug-brk --exit",
-    "start": "pm2 start RelayTesting/serve.js --name 'serve'",
+    "start": "pm2 start serve.js --name 'serve'",
     "stop": "pm2 stop serve",
     "log": "pm2 logs serve",
     "restart": "pm2 restart serve",
