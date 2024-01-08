@@ -4,7 +4,12 @@
   "description": "Relay server for Komodo VR client application",
   "main": "serve.js",
   "scripts": {
-    "test": "nyc mocha --debug-brk --exit"
+    "test": "nyc mocha --debug-brk --exit",
+    "start": "pm2 start RelayTesting/serve.js --name 'serve'",
+    "stop": "pm2 stop serve",
+    "log": "pm2 logs serve",
+    "restart": "pm2 restart serve",
+    "list": "pm2 list"
   },
   "author": "Grainger IDEA Lab",
   "license": "NCSA",
