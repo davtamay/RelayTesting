@@ -50,7 +50,7 @@ const ClientInfo = require("./clientInfo.js");
 const SocketRepairCenter = require("./socket-repair-center");
 const SocketActivityMonitor = require("./socket-activity-monitor");
 const chat = require("./chat");
-const { debug } = require("console");
+const { debug, Console } = require("console");
 const { ConsoleLoggingListener } = require("microsoft-cognitiveservices-speech-sdk/distrib/lib/src/common.browser/ConsoleLoggingListener");
 
 const crypto = require('crypto');
@@ -2368,34 +2368,34 @@ module.exports = {
 
   },
 
-  applyNewChildAssetState: function (session, message) {
+//   applyNewChildAssetState: function (session, message) {
 
-    let foundEntity = this.getEntityFromState(session, message.guid);
+//     let foundEntity = this.getEntityFromState(session, message.guid);
 
-    if (foundEntity == null) {
-      this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new asset import state: no entity with target_id ${message.guid} found. Creating one.`);
+//     if (foundEntity == null) {
+//       this.logInfoSessionClientSocketAction("unk", "unk", "unk", `apply new asset import state: no entity with target_id ${message.guid} found. Creating one.`);
 
-        let entity = {
+//         let entity = {
         
-            modelType: 1,
+//             modelType: 1,
 
-            guid: message.guid,
-            latest: message, // TODO(Brandon): investigate this. data.message?
-            render: true,
-            locked: false,
-          //  url: message.modelURL,
-        };
+//             guid: message.guid,
+//             latest: message, // TODO(Brandon): investigate this. data.message?
+//             render: true,
+//             locked: false,
+//           //  url: message.modelURL,
+//         };
 
-        session.entities.push(entity);
+//         session.entities.push(entity);
 
-        return;
-    }
+//         return;
+//     }
 
-    foundEntity.modelType = 1;
-    foundEntity.guid = message.guid;
- //   foundEntity.url = message.modelURL;
+//     foundEntity.modelType = 1;
+//     foundEntity.guid = message.guid;
+//  //   foundEntity.url = message.modelURL;
 
-  },
+//   },
 
   applyPrimitiveState: function (session, message) {
 
@@ -2814,9 +2814,9 @@ module.exports = {
         this.applyNewAssetState(session, message);
         break;
 
-      case "decomposedAsset":
-        this.applyNewChildAssetState(session, message);
-        break;
+      // case "decomposedAsset":
+      //   this.applyNewChildAssetState(session, message);
+      //   break;
 
       case "primitive":
         this.applyPrimitiveState(session, message);
@@ -2940,7 +2940,7 @@ module.exports = {
   processMessage: function (data, socket) {
     let { success, session_id, client_id } = this.getMetadataFromMessage(data, socket);
 
-    //console.log("receiving message from : " + session_id + " " + client_id);
+    
 
     if (!client_id || !session_id) {
       this.connectionAuthorizationErrorAction(
@@ -2974,6 +2974,8 @@ module.exports = {
     this.socketActivityMonitor.updateTime(socket.id);
 
     let session = this.sessions.get(session_id);
+
+    
 
     if (!session) {
       this.logErrorSessionClientSocketAction(
@@ -3014,17 +3016,18 @@ module.exports = {
 
     // relay the message
     this.messageAction(socket, session_id, data);
+    
 
     if (!data.message.length) {
         this.logErrorSessionClientSocketAction(session_id, client_id, socket.id, "tried to process message, but data.message.length was 0.");
 
         return;
     }
-
+// console.log("sessionID : " + session_id + "sessionid mes : " + data.session_id.toString());
     data.message = this.parseMessageIfNeeded(data, session_id, client_id);
 
     //TODO remove this.logInfoSessionClientSocketAction(null, null, null, data.message);
-
+// console.log("SESSION_ID : " + session_id + " CLIENT_ID : " + client_id );
     this.applyMessageToState(data, data.type, data.message, session, client_id, socket);
 
     // data capture
@@ -3093,11 +3096,17 @@ module.exports = {
     //  console.log("SENDING message TO : " + session_id);
 
 
-
-
-    if(data.sendTo === 0)
+//console.log("SENDING message TO : " + session_id);
+//console.log(data.sendTo);
+    if(data.sendTo == 0)
     {
-      socket.broadcast.to(session_id.toString()).emit(KomodoSendEvents.message, data);
+     // console.log("session : " + session_id + "message id : " + data.session_id.toString());
+
+   //  if(data.session_id.toString() === "1"){
+    //  var  session = this.getOrCreateSession(session_id);
+    //  console.log("ses id: " + session_id + " --- Session socket length: " + session.sockets.length + " --- Session client length: " + session.clients.length);
+   //  }
+      socket.broadcast.to(data.session_id.toString()).emit(KomodoSendEvents.message, data);
     }
     else if(data.sendTo === -2)
     {
@@ -3106,7 +3115,7 @@ module.exports = {
     }
     else if(data.sendTo === -1)
     {
-      io.of(SYNC_NAMESPACE).to(session_id.toString()).emit(KomodoSendEvents.message, data);
+      io.of(SYNC_NAMESPACE).to(data.session_id.toString()).emit(KomodoSendEvents.message, data);
     }
     else
     { 
@@ -3185,10 +3194,12 @@ module.exports = {
         true
       );
 
-      io.in(socket.id).socketsJoin(session_id.toString());
+   //   io.of(socket.id).socketsJoin(session_id.toString());
 
 
-
+     socket.join(session_id.toString(), () => {
+          console.log('Joined session2');
+      });
 
     //   socket.join(session_id.toString(), (err) => {
     //     console.log(`after ADDSOCKETANDCLIENT added client ${client_id}  to session ${session_id} - total in session: ${session.clients.size}`);
@@ -3254,9 +3265,13 @@ module.exports = {
       // socket.leave(session_id.toString(), function (err) {
 
       // console.log("LEAVE WWWASSS CALLEEEEEDDD");
-      io.in(socket.id).socketsLeave(session_id.toString());
+      
+      //this was not working because we are using the socket id and not the namespace, this kicks everyone out of the room
+     // io.of(socket.id).socketsLeave(session_id.toString());
 
-
+         socket.leave(session_id.toString(), (err) => {
+          this.failedToLeaveAction(session_id, `Failed to leave during bump: ${err}.`, socket);
+        });
 
 
 
@@ -3710,7 +3725,7 @@ module.exports = {
         let clientData = {};
         let session = self.sessions.get(session_id); // self.sessions.get(session_id);
 
-        console.log("Clients In Session sID and cID: " + session_id + "  " + session.getClients().length);
+      //  console.log("Clients In Session sID and cID: " + session_id + "  " + session.getClients().length);
 
       //  this.clientInfoDataMap.forEach((value,key) => { console.log(`inInfoDataMapkey : ${this.clientInfoDataMap.get(key).getId()}`); });
 
@@ -3825,19 +3840,28 @@ module.exports = {
 
         socket.broadcast.to(sessionData.session_id.toString()).emit('other_join', sessionData.id);
 
-        //   socket.broadcast.emit('other_join', sessionData.id);
-
         socket.broadcast.to(sessionData.oldSession_Id.toString()).emit( 'left', sessionData.id);
 
-        self.requestToLeaveSessionAction(sessionData.oldSession_Id, sessionData.id, socket);
-     //   self.removeClientFromSession(sessionData.id, sessionData.oldSession_Id);
+         self.requestToLeaveSessionAction(sessionData.oldSession_Id, sessionData.id, socket);
 
-    //  socket.broadcast.to(sessionData.oldSession_Id.toString()).emit('send_session_update', JSON.toString({session_id: sessionData.oldSession_Id, clientCount: self.session.getClients()}));
+        //  socket.leave(sessionData.oldSession_Id.toString(), (err) => {
+        //   this.failedToLeaveAction(session_id, `Failed to leave during bump: ${err}.`, socket);
+        // });
 
-        self.requestToJoinSessionAction(sessionData.session_id, sessionData.id, socket);
-   //     self.addClientToSession(sessionData.session_id, sessionData.id);
+      //   socket.join(sessionData.session_id.toString(), () => {
+      //     console.log('Joined session2');
+      // });
+   
+         self.requestToJoinSessionAction(sessionData.session_id, sessionData.id, socket);
+       
+         
+         var session =  self.getOrCreateSession(sessionData.session_id);
+       
+         //new  
+     //    self.repair(socket, sessionData.session_id, sessionData.id);
 
-   var session =  self.getOrCreateSession(sessionData.session_id);
+       //  self.removeClientFromSession(sessionData.id, sessionData.oldSession_Id);
+       //  self.joinSocketToRoomIfNeeded(socket, session);
 
 
    io.of(SYNC_NAMESPACE).emit('send_session_update', JSON.stringify({session_id: sessionData.session_id, clientCount: session.getClients().length}));
@@ -3888,7 +3912,8 @@ module.exports = {
         console.log("Unity Disconnected : " + ids.client_id + " from " + ids.session_id);
    //    socket.disconnect();
 
-
+   
+   
 
       });
 
