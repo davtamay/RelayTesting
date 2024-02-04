@@ -151,42 +151,36 @@ let connectedSockets = [
 ]
 
 
-
+let nameToClientIDMap = new Map();
 
 
 io.on('connection', (socket) => {
 
 
+  //a new client has joined. If there are any offers available emit them out
+  // if (offers.length)
+  //   socket.emit('availableOffers', offers);
+
 
   const userName = socket.handshake.auth.userName;
   const password = socket.handshake.auth.password;
+  const client_id = socket.handshake.auth.client_id;
 
-
+  nameToClientIDMap.set(userName, client_id);
 
   // if(password !== "x"){
   //     socket.disconnect(true);
   //     return;
   // }
 
-  // Add client to the clients object
-  //clients[socket.id] = { userName: socket.handshake.auth.userName };
 
   connectedSockets.push({
     socketId: socket.id,
     userName
   })
 
-
   // Notify all clients about the updated list
   io.emit('clientsUpdate', getOtherClients(socket.id));
-
-
-
-  socket.on('offerAnswered', (offererUserName) => {
-    console.log("OFFER ANSWERED+++++++++++++++++++++++++");
-    socket.broadcast.emit('removeOffer', offererUserName);
-  });
-
 
 
 
@@ -216,38 +210,17 @@ io.on('connection', (socket) => {
     console.log("DISCONNECTING CLIENT", disconnectingClient);
 
 
-
-
-
-
-
-
     // Find the offer that matches the disconnectingClient.userName
     const offerInOffers = offers.find(offer => offer.offererUserName === disconnectingClient.userName);
-
-
-    // if (!offerInOffers || !offerInOffers.offererUserName) {
-    //   // Find the index of the invalid offer
-    //   const index = offers.findIndex(offer => offer === offerInOffers);
-    //   if (index !== -1) {
-    //     // Remove the invalid offer from the array
-    //     offers.splice(index, 1);
-    //   }
-    //   console.log("Invalid offer removed: offererUserName is undefined or null");
-    //   return;
-    // }
-    // console.log("OFFER FOUND+++++++++++++++++++++++++" + offerInOffers.answererUserName);
-
-
 
     connectedSockets = connectedSockets.filter(s => s.socketId !== socket.id);
 
     // Remove any offers where the offerer is the disconnected user
     offers = offers.filter(offer => offer.offererUserName !== disconnectingClient.userName);
 
-    offers.forEach(element => {
-      console.log("OFFER", element.offererUserName);
-    });
+    // offers.forEach(element => {
+    //   console.log("OFFER", element.offererUserName);
+    // });
     // Notify all clients about the updated list
     io.emit('clientsUpdate', getOtherClients(socket.id));
 
@@ -268,85 +241,45 @@ io.on('connection', (socket) => {
         const answererSocketId = answererSocket.socketId;
 
         // Emit 'endCall' event to the answerer
-        io.to(answererSocketId).emit('clientDisconnected', answererUserName);
+        socket.broadcast.emit('clientDisconnected', disconnectingClient.userName);
       }
     }
 
-
-
-
-
-
-
   });
 
-  //a new client has joined. If there are any offers available,
-  //emit them out
-  if (offers.length) {
-    socket.emit('availableOffers', offers);
-  }
 
-
-  // socket.on('newShareScreenOffer', async ({ offer, offererUserName, answererUserName, receivingClientID }) => {
-  //   if (answererUserName === userName) {
-  //     await peerConnection.setRemoteDescription(offer);
-  //     const answer = await peerConnection.createAnswer();
-  //     await peerConnection.setLocalDescription(answer);
-  //     socket.emit('newAnswer', { answer, offererUserName, answererUserName, receivingClientID });
-  //   }
-  // });
-
-  // socket.on('newShareScreenOffer', data => {
-  //   let newOffer = {
-  //     offer: data.offer,
-  //     offererUserName: data.offererUserName,
-  //     answererUserName: data.answererUserName,
-  //     receivingClientID: data.receivingClientID,
-  //     offerIceCandidates: [],
-  //     answer: null,
-  //     answererIceCandidates: []
-  //   }
-
-  //   offers.push(newOffer)
-
-  //   console.log("SCREEN SHARE OFFER ARRIVED+++++++++++++++++++++++++");
-
-  //   let socketInfo = connectedSockets.find(socket => socket.userName === data.answererUserName);
-
-  //   if (socketInfo) {
-  //     console.log(`Socket ID for ${data.answererUserName} is ${socketInfo.socketId}`);
-  //   } else {
-  //     console.log(`No socket found for ${data.answererUserName}`);
-  //   }
-
-  //   // send the message to the specific socket
-  //   io.to(socketInfo.socketId).emit('newShareScreenOfferAwaiting', { offers: offers.slice(-1), newOffer, answererUserName: data.answererUserName });
-  // })
-
-  // socket.on('newShareScreenAnswer', data => {
-  //   let offer = offers.find(offer => offer.offererUserName === data.offererUserName && offer.answererUserName === data.answererUserName && offer.receivingClientID === data.receivingClientID);
-  //   if (offer) {
-  //     offer.answer = data.answer;
-  //     let socketInfo = connectedSockets.find(socket => socket.userName === data.offererUserName);
-  //     if (socketInfo) {
-  //       io.to(socketInfo.socketId).emit('newShareScreenAnswerAwaiting', { answer: data.answer, answererUserName: data.answererUserName });
-  //     }
-  //   }
-  // });
 
 
   socket.on('newOffer', data => {
 
+
+    let existingOffer = offers.find(offer => offer.offererUserName === data.answererUserName);
+
+    if (existingOffer) {
+
+      let socketInfo = connectedSockets.find(socket => socket.userName === data.answererUserName);
+
+      let socketInfo2 = connectedSockets.find(socket => socket.userName === data.offererUserName);
+      //to specific socket, socket.to is foe room
+
+      let offererClientID = nameToClientIDMap.get(data.offererUserName);
+      //io.to(socketInfo.socketId).emit('acceptClientOffer', { offer: existingOffer, isAnswerer: true, offererClientID: nameToClientIDMap.get(data.answererUserName) });
+      io.to(socketInfo2.socketId).emit('acceptClientOffer', existingOffer, offererClientID);
+
+      console.log("EXISTING OFFER :" + nameToClientIDMap.get(data.offererUserName));
+      return;
+    }
+
+
     let newOffer = {
       offer: data.offer,
       offererUserName: data.offererUserName,
+
       answererUserName: data.answererUserName,
-      receivingClientID: data.receivingClientID,
 
       type: data.type, // Include the type of offer
 
       offerIceCandidates: [],
-      // answererUserName: null,
       answer: null,
       answererIceCandidates: []
     }
@@ -364,12 +297,11 @@ io.on('connection', (socket) => {
         let socketInfo = connectedSockets.find(socket => socket.userName === clientUserName);
         if (socketInfo) {
           console.log(`Notifying ${clientUserName} about screen share offer.`);
-          io.to(socketInfo.socketId).emit('newScreenShareOfferAwaiting', { newOffer, answererUserName: clientUserName });
+          //  io.to(socketInfo.socketId).emit('newScreenShareOfferAwaiting', { newOffer: newOffer, answererUserName: clientUserName });
         }
       });
     } else {
       console.log("OFFER ARRIVED+++++++++++++++++++++++++");
-
 
       let socketInfo = connectedSockets.find(socket => socket.userName === data.answererUserName);
 
@@ -380,47 +312,41 @@ io.on('connection', (socket) => {
       }
 
 
-
-      // send the message to the specific socket
-      //  io.to(socketInfo.socketId).emit('newOfferAwaiting', { offers: offers.slice(-1), newOffer, answererUserName: data.answererUserName });
       if (socketInfo) {
-        io.to(socketInfo.socketId).emit('newOfferAwaiting', { offers: offers.slice(-1), newOffer, answererUserName: data.answererUserName, receivingClientID: data.receivingClientID });
+        io.to(socketInfo.socketId).emit('newOfferAwaiting', {
+          newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        });
       } else {
         console.error('No socket found for', data.answererUserName);
       }
 
     }
 
-    addToCall(data.offererUserName, data.answererUserName);
+    // addToCall(data.offererUserName, data.answererUserName);
 
   })
 
+  socket.on('offerAnswered', (offer) => {
+    console.log("OFFER ANSWERED+++++++++++++++++++++++++");
+    socket.broadcast.emit('removeOffer', offer);
+  });
+
   let roomCounter = 0;
 
-  socket.on('newAnswer', (offerObj, ackFunction) => {
-    console.log(offerObj);
+  socket.on('answerResolve', (offer, ackFunction) => {
+
     //emit this answer (offerObj) back to CLIENT1
     //in order to do that, we need CLIENT1's socketid
-    const socketToAnswer = connectedSockets.find(s => s.userName === offerObj.offererUserName)
+
+
+    const socketToAnswer = connectedSockets.find(s => s.userName === offer.offererUserName)
     if (!socketToAnswer) {
       console.log("No matching socket")
       return;
     }
     //we found the matching socket, so we can emit to it!
     const socketIdToAnswer = socketToAnswer.socketId;
-    //we find the offer to update so we can emit it
-    const offerToUpdate = offers.find(o => o.offererUserName === offerObj.offererUserName)
-    if (!offerToUpdate) {
-      console.log("No OfferToUpdate")
-      return;
-    }
-    //send back to the answerer all the iceCandidates we have already collected
-    ackFunction(offerToUpdate.offerIceCandidates);
-    offerToUpdate.answer = offerObj.answer
-    offerToUpdate.answererUserName = offerObj.answererUserName;//userName
-    //socket has a .to() which allows emiting to a "room"
-    //every socket has it's own room
-    socket.to(socketIdToAnswer).emit('answerResponse', offerToUpdate)
+
 
 
 
@@ -428,8 +354,8 @@ io.on('connection', (socket) => {
     const roomName = `room${roomCounter++}`;
 
     // Join the clients to the room
-    const offererSocketKeyValue = connectedSockets.find(client => client.userName === offerObj.offererUserName);
-    const answererSocketidKeyValue = connectedSockets.find(client => client.userName === offerObj.answererUserName);
+    const offererSocketKeyValue = connectedSockets.find(client => client.userName === offer.offererUserName);
+    const answererSocketidKeyValue = connectedSockets.find(client => client.userName === offer.answererUserName);
 
     const offereId = offererSocketKeyValue.socketId;
     const answererId = answererSocketidKeyValue.socketId;
@@ -441,22 +367,31 @@ io.on('connection', (socket) => {
     const answererSocket = io.sockets.sockets.get(answererId);
 
     // console.log(offererSocketid, answererSocketid, offererSocket, answererSocket);
+    offer.roomName = roomName;
 
     if (offererSocket) offererSocket.join(roomName);
     if (answererSocket) answererSocket.join(roomName);
-    // console.log("offerer socket", offererSocket)
-    // console.log("answerer socket", answererSocket)
+
     // Store the room name in the clients
     if (offererSocket) offererSocket.roomName = roomName;
     if (answererSocket) answererSocket.roomName = roomName;
 
+    // io.to(roomName).emit('roomCreated', { roomName, nameToAdd: offereName });
     // Emit the room name to the clients
     if (offererSocket) offererSocket.emit('roomCreated', { roomName, nameToAdd: answererName });
     if (answererSocket) answererSocket.emit('roomCreated', { roomName, nameToAdd: offereName });
 
+    addToCall(offer.offererUserName, offer.answererUserName);
 
-    addToCall(offerObj.offererUserName, offerObj.answererUserName);
+
+    //every socket has it's own room
+    socket.to(socketIdToAnswer).emit('answerResponse', { offer, offererClientID: nameToClientIDMap.get(offer.offererUserName) });//, roomName: roomName});
+
+    //send back to the answerer all the iceCandidates we have already collected
+    ackFunction(offer.offerIceCandidates);
   })
+
+
 
   socket.on('sendCallEndedToServer', (roomName) => {
     // Forward the 'callEnded' event to all other clients in the room
@@ -472,10 +407,12 @@ io.on('connection', (socket) => {
 
   socket.on('sendIceCandidateToSignalingServer', iceCandidateObj => {
     const { didIOffer, iceUserName, iceCandidate } = iceCandidateObj;
-    // console.log(iceCandidate);
+
+
     if (didIOffer) {
       //this ice is coming from the offerer. Send to the answerer
       const offerInOffers = offers.find(o => o.offererUserName === iceUserName);
+
       if (offerInOffers) {
         offerInOffers.offerIceCandidates.push(iceCandidate)
         // 1. When the answerer answers, all existing ice candidates are sent
@@ -493,6 +430,8 @@ io.on('connection', (socket) => {
     } else {
       //this ice is coming from the answerer. Send to the offerer
       //pass it through to the other socket
+
+
       const offerInOffers = offers.find(o => o.answererUserName === iceUserName);
 
       if (!offerInOffers || !offerInOffers.offererUserName) {
@@ -508,7 +447,9 @@ io.on('connection', (socket) => {
 
       const socketToSendTo = connectedSockets.find(s => s.userName === offerInOffers.offererUserName);
       if (socketToSendTo) {
-        socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', iceCandidate)
+        //why is ice candidate null?
+        if (iceCandidate)
+          socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', iceCandidate)
       } else {
         console.log("Ice candidate recieved but could not find offerer")
       }
