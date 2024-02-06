@@ -185,10 +185,12 @@ io.on('connection', (socket) => {
 
 
 
+
   socket.on('disconnect', () => {
     // Remove the disconnected client
     let disconnectingClient = connectedSockets.find(s => s.socketId === socket.id);
 
+    nameToClientIDMap.delete(disconnectingClient.userName);
 
     // Assuming disconnectingClient is determined earlier
     let disconnectingClientUserName = disconnectingClient.userName;
@@ -218,9 +220,6 @@ io.on('connection', (socket) => {
     // Remove any offers where the offerer is the disconnected user
     offers = offers.filter(offer => offer.offererUserName !== disconnectingClient.userName);
 
-    // offers.forEach(element => {
-    //   console.log("OFFER", element.offererUserName);
-    // });
     // Notify all clients about the updated list
     io.emit('clientsUpdate', getOtherClients(socket.id));
 
@@ -322,9 +321,28 @@ io.on('connection', (socket) => {
 
     }
 
-    // addToCall(data.offererUserName, data.answererUserName);
-
   })
+
+  socket.on('requestRejectOffer', message => {
+    if (message.type === 'offer-rejection') {
+      const offererUserName = getKeyByValue(nameToClientIDMap, message.offererClientID);//message.offererUserName; // The username of the peer who made the offer
+
+      const reason = message.reason; // The reason for rejection
+      console.log(`Call offer to ${offererUserName} was rejected: ${reason}`);
+
+      //const name = getKeyByValue(nameToClientIDMap, message.offererClientID);
+
+      // Remove the offer from the offers array
+      offers = offers.filter(offer => !(offer.offererUserName === offererUserName && offer.answererUserName === message.answererUserName));
+
+      const offererSocketID = connectedSockets.find(s => s.userName === offererUserName).socketId;
+      io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName });
+
+
+    }
+  });
+
+
 
   socket.on('offerAnswered', (offer) => {
     console.log("OFFER ANSWERED+++++++++++++++++++++++++");
@@ -499,7 +517,13 @@ function removeFromCall(offererUserName, participantUserName) {
 }
 
 
-
+function getKeyByValue(map, searchValue) {
+  for (let [key, value] of map.entries()) {
+    if (value === searchValue) {
+      return key;
+    }
+  }
+}
 
 
 
