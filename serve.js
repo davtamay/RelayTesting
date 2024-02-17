@@ -1,39 +1,3 @@
-// University of Illinois/NCSA
-// Open Source License
-// http://otm.illinois.edu/disclose-protect/illinois-open-source-license
-
-// Copyright (c) 2020 Grainger Engineering Library Information Center.  All rights reserved.
-
-// Developed by: IDEA Lab
-//               Grainger Engineering Library Information Center - University of Illinois Urbana-Champaign
-//               https://library.illinois.edu/enx
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the "Software"), to deal with
-// the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is furnished to
-// do so, subject to the following conditions:
-// * Redistributions of source code must retain the above copyright notice,
-//   this list of conditions and the following disclaimers.
-// * Redistributions in binary form must reproduce the above copyright notice,
-//   this list of conditions and the following disclaimers in the documentation
-//   and/or other materials provided with the distribution.
-// * Neither the names of IDEA Lab, Grainger Engineering Library Information Center,
-//   nor the names of its contributors may be used to endorse or promote productc:\Users\David\OneDrive\Documents\RELAY\RelayTesting\serve.jss
-//   derived from this Software without specific prior written permission.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
-// SOFTWARE.
-
-/* jshint esversion: 6 */
-
-
 const https = require('https');
 
 const socketIO = require('socket.io');
@@ -56,7 +20,7 @@ const path = require('path');
 
 // set up logging
 const { createLogger, format, transports } = require('winston');
-const { debug } = require('console');
+
 
 const { combine, timestamp, printf } = format;
 
@@ -98,17 +62,6 @@ if (config.db.host && config.db.host != "") {
   if (logger) logger.info(`Database pool created: host: ${config.db.host}, database: ${config.db.database}.`);
 }
 
-
-
-
-
-
-
-
-
-
-
-
 const keyPath = path.join(__dirname, 'certs', 'privkey.pem');
 const certPath = path.join(__dirname, 'certs', 'fullchain.pem');
 
@@ -134,7 +87,7 @@ const io = new socketIO.Server(server,
   });
 
 
-
+const roomName = '1'//`room${roomCounter++}`;
 
 //offers will contain {}
 
@@ -190,24 +143,27 @@ io.on('connection', (socket) => {
     // Remove the disconnected client
     let disconnectingClient = connectedSockets.find(s => s.socketId === socket.id);
 
+    socket.leave(roomName);
+
+
     nameToClientIDMap.delete(disconnectingClient.userName);
 
     // Assuming disconnectingClient is determined earlier
-    let disconnectingClientUserName = disconnectingClient.userName;
+    //let disconnectingClientUserName = disconnectingClient.userName;
 
-    // Iterate through all active calls to remove the disconnecting client
-    Object.keys(activeCalls).forEach(offererUserName => {
-      // Check if the disconnecting client is part of this call
-      if (activeCalls[offererUserName].includes(disconnectingClientUserName)) {
-        // Safely remove the client from the call
-        activeCalls[offererUserName] = activeCalls[offererUserName].filter(userName => userName !== disconnectingClientUserName);
+    // // Iterate through all active calls to remove the disconnecting client
+    // Object.keys(activeCalls).forEach(offererUserName => {
+    //   // Check if the disconnecting client is part of this call
+    //   if (activeCalls[offererUserName].includes(disconnectingClientUserName)) {
+    //     // Safely remove the client from the call
+    //     activeCalls[offererUserName] = activeCalls[offererUserName].filter(userName => userName !== disconnectingClientUserName);
 
-        // If no participants are left in the call, delete the entry
-        if (!activeCalls[offererUserName].length) {
-          delete activeCalls[offererUserName];
-        }
-      }
-    });
+    //     // If no participants are left in the call, delete the entry
+    //     if (!activeCalls[offererUserName].length) {
+    //       delete activeCalls[offererUserName];
+    //     }
+    //   }
+    // });
 
     console.log("DISCONNECTING CLIENT", disconnectingClient);
 
@@ -227,99 +183,116 @@ io.on('connection', (socket) => {
     io.emit('availableOffers', offers);
 
 
+    socket.broadcast.emit('clientDisconnected', disconnectingClient.userName);
 
-    if (offerInOffers && offerInOffers.answererUserName) {
-      // The offer is found
-      const answererUserName = offerInOffers.answererUserName;
+    //  if (offerInOffers && offerInOffers.answererUserName) {
+    // The offer is found
+    //   const answererUserName = offerInOffers.answererUserName;
 
-      // Get the socket of the answerer
-      const answererSocket = connectedSockets.find(s => s.userName === answererUserName);
+    // Get the socket of the answerer
+    //    const answererSocket = connectedSockets.find(s => s.userName === answererUserName);
 
-      if (answererSocket) {
-        // The answerer socket is found
-        const answererSocketId = answererSocket.socketId;
 
-        // Emit 'endCall' event to the answerer
-        socket.broadcast.emit('clientDisconnected', disconnectingClient.userName);
-      }
-    }
+    // The answerer socket is found
+    // const answererSocketId = answererSocket.socketId;
+
+    // Emit 'endCall' event to the answerer
+
+    // }
 
   });
 
 
 
 
-  socket.on('newOffer', data => {
-
-
-    let existingOffer = offers.find(offer => offer.offererUserName === data.answererUserName);
-
-    if (existingOffer) {
-
-      let socketInfo = connectedSockets.find(socket => socket.userName === data.answererUserName);
-
-      let socketInfo2 = connectedSockets.find(socket => socket.userName === data.offererUserName);
-      //to specific socket, socket.to is foe room
-
-      let offererClientID = nameToClientIDMap.get(data.offererUserName);
-      //io.to(socketInfo.socketId).emit('acceptClientOffer', { offer: existingOffer, isAnswerer: true, offererClientID: nameToClientIDMap.get(data.answererUserName) });
-      io.to(socketInfo2.socketId).emit('acceptClientOffer', existingOffer, offererClientID);
-
-      console.log("EXISTING OFFER :" + nameToClientIDMap.get(data.offererUserName));
-      return;
-    }
-
+  socket.on('newOffer', async (data) => {
 
     let newOffer = {
       offer: data.offer,
-      offererUserName: data.offererUserName,
 
+      offererUserName: data.offererUserName,
       answererUserName: data.answererUserName,
 
-      type: data.type, // Include the type of offer
-
+      offererSocketID: socket.id,
+      answererSocketID: connectedSockets.find(socket => socket.userName === data.answererUserName)?.socketId,
       offerIceCandidates: [],
       answer: null,
       answererIceCandidates: []
     }
 
+    // offer.answererSocketId = answererSocketidKeyValue.socketId;
+    // offer.offererSocketId = offererSocketKeyValue.socketId;
+
+
+
     offers.push(newOffer)
 
-    // Handle the offer based on its type
-    if (data.type === 'screenShare') {
-      console.log("Screen share offer arrived");
+    console.log("OFFER ARRIVED+++++++++++++++++++++++++");
 
-      // Example: Notify only specific clients about the screen share offer
-      // This could be based on some logic, like clients who are already in a call with the offerer
-      const clientsInCallWithOfferer = getClientsInCallWithOfferer(data.offererUserName);
-      clientsInCallWithOfferer.forEach(clientUserName => {
-        let socketInfo = connectedSockets.find(socket => socket.userName === clientUserName);
-        if (socketInfo) {
-          console.log(`Notifying ${clientUserName} about screen share offer.`);
-          //  io.to(socketInfo.socketId).emit('newScreenShareOfferAwaiting', { newOffer: newOffer, answererUserName: clientUserName });
-        }
-      });
+    let answererSocket = connectedSockets.find(socket => socket.userName === data.answererUserName);
+
+    let socketInfoOfferer = connectedSockets.find(socket => socket.userName === data.offererUserName);
+
+    if (answererSocket) {
+      console.log(`Socket ID for ${data.answererUserName} is ${answererSocket.socketId}`);
     } else {
-      console.log("OFFER ARRIVED+++++++++++++++++++++++++");
+      console.log(`No socket found for ${data.answererUserName}`);
+    }
 
-      let socketInfo = connectedSockets.find(socket => socket.userName === data.answererUserName);
 
-      if (socketInfo) {
-        console.log(`Socket ID for ${data.answererUserName} is ${socketInfo.socketId}`);
+    if (answererSocket) {
+
+      if (data.isForClientSync) {
+
+
+        io.to(answererSocket.socketId).emit('newOfferAwaiting2', {
+          isForClientSync: data.isForClientSync,
+          newOffer: newOffer, offererSocketID: newOffer.offererSocketID, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        });
+
+        //  console.log("SENDING NEW OFFER AWAITING 2 --- offererSocketID " + newOffer.offererSocketID )
+
+        // const sockets = await io.in(roomName).fetchSockets();
+
+        // for (const s of sockets) {
+
+        //  s.emit('newOfferAwaiting', {
+        //     newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        //   });
+
+        // }
+
+
+
+        //io.to(answererSocket.socketId).emit('receiveOffer', newOffer, newOffer.offererUserName) //, nameToClientIDMap.get(newOffer.offererUserName) );
+
+
+
+        // io.to(answererSocket.socketId).emit('newOfferAwaiting', {
+        //     newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        //   });
+
+        //  io.to(socketInfo.socketId).emit('acceptClientOffer', {offer: newOffer, isAnswer: true, offererClientID: nameToClientIDMap.get(data.offererUserName)});
+
+
+        //  io.to(socketInfo.socketInfoOfferer).emit('acceptClientOffer', {offer: newOffer, offererClientID: nameToClientIDMap.get(data.offererUserName)});
+
       } else {
-        console.log(`No socket found for ${data.answererUserName}`);
-      }
 
-
-      if (socketInfo) {
-        io.to(socketInfo.socketId).emit('newOfferAwaiting', {
+        io.to(answererSocket.socketId).emit('newOfferAwaiting', {
           newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
         });
-      } else {
-        console.error('No socket found for', data.answererUserName);
+        // io.to(answererSocket.socketId).emit('newOfferAwaiting2', {
+        //   newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        // });
+
       }
 
+    } else {
+      console.error('No socket found for', data.answererUserName);
     }
+
+    //   }
 
   })
 
@@ -340,51 +313,70 @@ io.on('connection', (socket) => {
 
 
     }
+
   });
 
+  socket.on('roomCallClient', async (clientToAdd, clientsAlreadyConnectedTo, otherClientID, offer) => {
+
+    clientsAlreadyConnectedTo.push(socket.id);
+    // if(otherClientID){
+
+    //   io.to(otherClientID).emit('syncForOfferer', clientToAdd, offer);
+    //   return;
+    // }
+
+    const sockets = await io.in(roomName).fetchSockets();
+    console.log("NUMBER OF SOCKETS IN ROOM " + roomName + " " + sockets.length);
+
+    // Create a new array that includes only the socket objects that are not in clientsAlreadyConnectedTo
+    let socketsNotConnected = sockets.filter(s => !clientsAlreadyConnectedTo.includes(s.id));
+    console.log("NUMBER AFTER FILTER - NotConnected " + socketsNotConnected.length);
+
+    for (const s of socketsNotConnected) {
+
+      setTimeout(() => {
+
+        let socketInfo = connectedSockets.find(socket => socket.socketId === s.id);
+        // console.log("CALLER ID " + socket.id + "  clientsNotConnectedTo: " + s.id);
+        console.log("SENDING CLIENT :  " + clientToAdd + " to client: " + socketInfo.userName);
+        io.to(s.id).emit('makeClientSendOffer', clientToAdd);
+      }, 1000);
+      // if(s.id !== socket.id )
+      // {
+
+      //  io.to(s.id).emit('makeClientSendOffer', clientToAdd );
+
+      // }
+    }
+
+    //check offerer client if it needs to sync
+    // if(otherClientID)
+    // io.to(otherClientID).emit('syncForOfferer', offer.offererUserName, offer);
+
+
+    // if(otherClientID){
+    //   io.to(otherClientID).emit('makeClientSendOffer', clientToAdd );
+    // }
+  });
 
 
   socket.on('offerAnswered', (offer) => {
     console.log("OFFER ANSWERED+++++++++++++++++++++++++");
-    socket.broadcast.emit('removeOffer', offer);
+    // socket.broadcast.emit('removeOffer', offer);
   });
 
-  let roomCounter = 0;
-
-  socket.on('answerResolve', (offer, ackFunction) => {
-
-    //emit this answer (offerObj) back to CLIENT1
-    //in order to do that, we need CLIENT1's socketid
 
 
-    const socketToAnswer = connectedSockets.find(s => s.userName === offer.offererUserName)
-    if (!socketToAnswer) {
-      console.log("No matching socket")
-      return;
-    }
-    //we found the matching socket, so we can emit to it!
-    const socketIdToAnswer = socketToAnswer.socketId;
-
-
-
-
-    // Create a new room
-    const roomName = `room${roomCounter++}`;
+  socket.on('answerResolve', async (offer, ackFunction) => {
+    console.log("ANSWER RESOLVE+++++++++++++++++++++++++");
 
     // Join the clients to the room
-    const offererSocketKeyValue = connectedSockets.find(client => client.userName === offer.offererUserName);
-    const answererSocketidKeyValue = connectedSockets.find(client => client.userName === offer.answererUserName);
+    const offererSocketObject = connectedSockets.find(client => client.userName === offer.offererUserName);
+    const answererSocketObject = connectedSockets.find(client => client.userName === offer.answererUserName);
 
-    const offereId = offererSocketKeyValue.socketId;
-    const answererId = answererSocketidKeyValue.socketId;
+    const offererSocket = io.sockets.sockets.get(offer.offererSocketID);//offererSocketObject.socketId);
+    const answererSocket = io.sockets.sockets.get(offer.answererSocketID);//answererSocketObject.socketId);
 
-    const offereName = offererSocketKeyValue.userName;
-    const answererName = answererSocketidKeyValue.userName;
-
-    const offererSocket = io.sockets.sockets.get(offereId);
-    const answererSocket = io.sockets.sockets.get(answererId);
-
-    // console.log(offererSocketid, answererSocketid, offererSocket, answererSocket);
     offer.roomName = roomName;
 
     if (offererSocket) offererSocket.join(roomName);
@@ -394,33 +386,49 @@ io.on('connection', (socket) => {
     if (offererSocket) offererSocket.roomName = roomName;
     if (answererSocket) answererSocket.roomName = roomName;
 
-    // io.to(roomName).emit('roomCreated', { roomName, nameToAdd: offereName });
+
     // Emit the room name to the clients
-    if (offererSocket) offererSocket.emit('roomCreated', { roomName, nameToAdd: answererName });
-    if (answererSocket) answererSocket.emit('roomCreated', { roomName, nameToAdd: offereName });
+    if (offererSocket) offererSocket.emit('roomCreated', { roomName, nameToAdd: offer.answererUserName });
 
-    addToCall(offer.offererUserName, offer.answererUserName);
+    if (answererSocket) answererSocket.emit('roomCreated', { roomName, nameToAdd: offer.offererUserName });
 
 
-    //every socket has it's own room
-    socket.to(socketIdToAnswer).emit('answerResponse', { offer, offererClientID: nameToClientIDMap.get(offer.offererUserName) });//, roomName: roomName});
+    const offerToUpdate = offers.find(o => o.offererUserName === offer.offererUserName)
+    if (!offerToUpdate) {
+      console.log("No OfferToUpdate")
+      return;
+    }
+    offerToUpdate.answer = offer.answer
+    offerToUpdate.answererUserName = userName
 
-    //send back to the answerer all the iceCandidates we have already collected
-    ackFunction(offer.offerIceCandidates);
+
+    ackFunction(offer)//.offerIceCandidates);
+
+    io.to(offererSocketObject.socketId).emit('answerResponse', { offer: offerToUpdate, offererClientID: nameToClientIDMap.get(offer.answererUserName) }); //, otherClientsInRoom });//, roomName: roomName});
+
+
   })
 
-
-
-  socket.on('sendCallEndedToServer', (roomName) => {
-    // Forward the 'callEnded' event to all other clients in the room
-    socket.to(roomName).emit('callEnded');
-
+  socket.on('sendAnswer', (data) => {
+    console.log("SEND ANSWER+++++++++++++++++++++++++" + data.fromUserName);
+    const recipientSocketId = findSocketIdByUsername(data.fromUserName);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('receiveAnswer2', data.offer, data.user);
+    }
   });
 
+  function findSocketIdByUsername(username) {
+    const socketInfo = connectedSockets.find(s => s.userName === username);
+    return socketInfo ? socketInfo.socketId : null;
+  }
 
 
-
-
+  socket.on('sendCallEndedToServer', (userName) => {
+    // Forward the 'callEnded' event to all other clients in the room
+    //socket.to(userName).emit('callEnded', nameToClientIDMap.get(userName));
+    socket.leave(roomName);
+    socket.broadcast.emit('callEnded', nameToClientIDMap.get(userName));
+  });
 
 
   socket.on('sendIceCandidateToSignalingServer', iceCandidateObj => {
@@ -436,10 +444,15 @@ io.on('connection', (socket) => {
         // 1. When the answerer answers, all existing ice candidates are sent
         // 2. Any candidates that come in after the offer has been answered, will be passed through
         if (offerInOffers.answererUserName) {
+
           //pass it through to the other socket
+          const socketFrom = connectedSockets.find(s => s.userName === offerInOffers.offererUserName);
           const socketToSendTo = connectedSockets.find(s => s.userName === offerInOffers.answererUserName);
           if (socketToSendTo) {
-            socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', iceCandidate)
+
+            // console.log(`IOFFERED --- ICE CANDIDATE ARRIVED+++++++++++++++++++++++++  ${offerInOffers.offererUserName}`);
+
+            socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', { iceCandidate, offer: offerInOffers, from: socketFrom.userName, to: socketToSendTo.userName })
           } else {
             console.log("Ice candidate recieved but could not find answere")
           }
@@ -452,7 +465,7 @@ io.on('connection', (socket) => {
 
       const offerInOffers = offers.find(o => o.answererUserName === iceUserName);
 
-      if (!offerInOffers || !offerInOffers.offererUserName) {
+      if (!offerInOffers) {
         // Find the index of the invalid offer
         const index = offers.findIndex(offer => offer === offerInOffers);
         if (index !== -1) {
@@ -463,11 +476,18 @@ io.on('connection', (socket) => {
         return;
       }
 
+
+
+      const socketFrom = connectedSockets.find(s => s.userName === offerInOffers.answererUserName);
+
+
       const socketToSendTo = connectedSockets.find(s => s.userName === offerInOffers.offererUserName);
       if (socketToSendTo) {
         //why is ice candidate null?
-        if (iceCandidate)
-          socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', iceCandidate)
+        // if (iceCandidate)
+        // console.log(`IRECEIVED --- ICE CANDIDATE ARRIVED+++++++++++++++++++++++++  ${offerInOffers.offererUserName}`);
+
+        socket.to(socketToSendTo.socketId).emit('receivedIceCandidateFromServer', { iceCandidate, offer: offerInOffers, from: socketFrom.userName, to: socketToSendTo.userName })
       } else {
         console.log("Ice candidate recieved but could not find offerer")
       }
@@ -491,30 +511,30 @@ function getOtherClients(excludedClientId) {
 
 // At the top level of your server code
 let activeCalls = {};
-// Utility functions as previously defined
-function getClientsInCallWithOfferer(offererUserName) {
-  return activeCalls[offererUserName] || [];
-}
+//Utility functions as previously defined
+// function getClientsInCallWithOfferer(offererUserName) {
+//   return activeCalls[offererUserName] || [];
+// }
 
-function addToCall(offererUserName, participantUserName) {
-  if (!activeCalls[offererUserName]) {
-    activeCalls[offererUserName] = [];
-  }
-  activeCalls[offererUserName].push(participantUserName);
-}
+// function addToCall(offererUserName, participantUserName) {
+//   if (!activeCalls[offererUserName]) {
+//     activeCalls[offererUserName] = [];
+//   }
+//   activeCalls[offererUserName].push(participantUserName);
+// }
 
-function removeFromCall(offererUserName, participantUserName) {
-  // Check if there is an entry for offererUserName to avoid accessing properties of undefined
-  if (activeCalls[offererUserName]) {
-    // Proceed to filter out the participantUserName
-    activeCalls[offererUserName] = activeCalls[offererUserName].filter(userName => userName !== participantUserName);
+// function removeFromCall(offererUserName, participantUserName) {
+//   // Check if there is an entry for offererUserName to avoid accessing properties of undefined
+//   if (activeCalls[offererUserName]) {
+//     // Proceed to filter out the participantUserName
+//     activeCalls[offererUserName] = activeCalls[offererUserName].filter(userName => userName !== participantUserName);
 
-    // After filtering, check if there are no more participants left
-    if (activeCalls[offererUserName].length === 0) {
-      delete activeCalls[offererUserName]; // Delete the entry if no participants are left
-    }
-  }
-}
+//     // After filtering, check if there are no more participants left
+//     if (activeCalls[offererUserName].length === 0) {
+//       delete activeCalls[offererUserName]; // Delete the entry if no participants are left
+//     }
+//   }
+// }
 
 
 function getKeyByValue(map, searchValue) {
