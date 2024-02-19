@@ -20,6 +20,7 @@ const path = require('path');
 
 // set up logging
 const { createLogger, format, transports } = require('winston');
+const { Console } = require('console');
 
 
 const { combine, timestamp, printf } = format;
@@ -148,22 +149,6 @@ io.on('connection', (socket) => {
 
     nameToClientIDMap.delete(disconnectingClient.userName);
 
-    // Assuming disconnectingClient is determined earlier
-    //let disconnectingClientUserName = disconnectingClient.userName;
-
-    // // Iterate through all active calls to remove the disconnecting client
-    // Object.keys(activeCalls).forEach(offererUserName => {
-    //   // Check if the disconnecting client is part of this call
-    //   if (activeCalls[offererUserName].includes(disconnectingClientUserName)) {
-    //     // Safely remove the client from the call
-    //     activeCalls[offererUserName] = activeCalls[offererUserName].filter(userName => userName !== disconnectingClientUserName);
-
-    //     // If no participants are left in the call, delete the entry
-    //     if (!activeCalls[offererUserName].length) {
-    //       delete activeCalls[offererUserName];
-    //     }
-    //   }
-    // });
 
     console.log("DISCONNECTING CLIENT", disconnectingClient);
 
@@ -185,27 +170,38 @@ io.on('connection', (socket) => {
 
     socket.broadcast.emit('clientDisconnected', disconnectingClient.userName);
 
-    //  if (offerInOffers && offerInOffers.answererUserName) {
-    // The offer is found
-    //   const answererUserName = offerInOffers.answererUserName;
-
-    // Get the socket of the answerer
-    //    const answererSocket = connectedSockets.find(s => s.userName === answererUserName);
-
-
-    // The answerer socket is found
-    // const answererSocketId = answererSocket.socketId;
-
-    // Emit 'endCall' event to the answerer
-
-    // }
 
   });
 
 
 
 
+
+  // A function to determine if an offer should be sent between two peers
+  function shouldSendOffer(offererUserName, answererUserName) {
+    // Simplified logic: Check if an offer already exists to prevent duplicates
+    const existingOffer = offers.find(offer =>
+      (offer.offererUserName === offererUserName && offer.answererUserName === answererUserName) ||
+      (offer.offererUserName === answererUserName && offer.answererUserName === offererUserName));
+
+    return !existingOffer;
+  }
+
+
   socket.on('newOffer', async (data) => {
+
+    // if (!shouldSendOffer(data.offererUserName, data.answererUserName)) {
+    //   console.log(`Duplicate offer prevented between ${data.offererUserName} and ${data.answererUserName}`);
+    //   return;
+    // }
+
+    // if (!shouldSendOffer(data.offererUserName, data.answererUserName)) {
+
+    //   console.log("Offer already exists between these two users" + data.offererUserName + " " + data.answererUserName);
+    //   return;
+    // }
+
+
 
     let newOffer = {
       offer: data.offer,
@@ -306,24 +302,23 @@ io.on('connection', (socket) => {
       //const name = getKeyByValue(nameToClientIDMap, message.offererClientID);
 
       // Remove the offer from the offers array
-      offers = offers.filter(offer => !(offer.offererUserName === offererUserName && offer.answererUserName === message.answererUserName));
+      //offers = offers.filter(offer => !(offer.offererUserName === offererUserName && offer.answererUserName === message.answererUserName));
 
       const offererSocketID = connectedSockets.find(s => s.userName === offererUserName).socketId;
       io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName });
 
+      // Process the answer...
+      removeOfferFromList(offer.offererUserName, offer.answererUserName)
+      removeOfferTracking(offer.offererUserName, offer.answererUserName);
 
     }
 
   });
 
-  socket.on('roomCallClient', async (clientToAdd, clientsAlreadyConnectedTo, otherClientID, offer) => {
+  socket.on('roomCallClient', async (clientToAdd, clientsAlreadyConnectedTo, offer) => {
 
     clientsAlreadyConnectedTo.push(socket.id);
-    // if(otherClientID){
 
-    //   io.to(otherClientID).emit('syncForOfferer', clientToAdd, offer);
-    //   return;
-    // }
 
     const sockets = await io.in(roomName).fetchSockets();
     console.log("NUMBER OF SOCKETS IN ROOM " + roomName + " " + sockets.length);
@@ -336,17 +331,14 @@ io.on('connection', (socket) => {
 
       setTimeout(() => {
 
-        let socketInfo = connectedSockets.find(socket => socket.socketId === s.id);
-        // console.log("CALLER ID " + socket.id + "  clientsNotConnectedTo: " + s.id);
-        console.log("SENDING CLIENT :  " + clientToAdd + " to client: " + socketInfo.userName);
+        //   let socketInfo = connectedSockets.find(socket => socket.socketId === s.id);
+        // console.log("SENDING CLIENT :  " + clientToAdd + " to client: " + socketInfo.userName);
         io.to(s.id).emit('makeClientSendOffer', clientToAdd);
+
+
       }, 1000);
-      // if(s.id !== socket.id )
-      // {
 
-      //  io.to(s.id).emit('makeClientSendOffer', clientToAdd );
 
-      // }
     }
 
     //check offerer client if it needs to sync
@@ -367,8 +359,25 @@ io.on('connection', (socket) => {
 
 
 
-  socket.on('answerResolve', async (offer, ackFunction) => {
+
+  socket.on('connectionEstablished', (data) => {
+
+    removeOfferFromList(data.offererUserName, data.answererUserName)
+    removeOfferTracking(data.offererUserName, data.answererUserName);
+
+    // console.log("INFORM CLIENT OF ANSWER+++++++++++++++++++++++++");
+    // io.to(data.answererSocketID).emit('informAnswered', { answererUserName: data.answererUserName, offererUserName: data.offererUserName });
+    // attachIceCandidateListener(peerConnection, userName, false);
+  })
+
+
+
+
+  socket.on('newAnswer', async (offer, ackFunction) => {
     console.log("ANSWER RESOLVE+++++++++++++++++++++++++");
+
+
+
 
     // Join the clients to the room
     const offererSocketObject = connectedSockets.find(client => client.userName === offer.offererUserName);
@@ -377,7 +386,7 @@ io.on('connection', (socket) => {
     const offererSocket = io.sockets.sockets.get(offer.offererSocketID);//offererSocketObject.socketId);
     const answererSocket = io.sockets.sockets.get(offer.answererSocketID);//answererSocketObject.socketId);
 
-    offer.roomName = roomName;
+    //offer.roomName = roomName;
 
     if (offererSocket) offererSocket.join(roomName);
     if (answererSocket) answererSocket.join(roomName);
@@ -398,16 +407,26 @@ io.on('connection', (socket) => {
       console.log("No OfferToUpdate")
       return;
     }
-    offerToUpdate.answer = offer.answer
-    offerToUpdate.answererUserName = userName
 
+    offerToUpdate.answer = offer.answer
+    offerToUpdate.answererUserName = offer.answererUserName
+    offerToUpdate.isForSync = offer.isForSync
+
+    offerToUpdate.offer = offer.offer;
 
     ackFunction(offer)//.offerIceCandidates);
 
     io.to(offererSocketObject.socketId).emit('answerResponse', { offer: offerToUpdate, offererClientID: nameToClientIDMap.get(offer.answererUserName) }); //, otherClientsInRoom });//, roomName: roomName});
 
+    // Process the answer...
+    // removeOfferFromList(offer.offererUserName, offer.answererUserName)
+    // removeOfferTracking(offer.offererUserName, offer.answererUserName);
 
   })
+
+
+
+
 
   socket.on('sendAnswer', (data) => {
     console.log("SEND ANSWER+++++++++++++++++++++++++" + data.fromUserName);
@@ -465,18 +484,22 @@ io.on('connection', (socket) => {
 
       const offerInOffers = offers.find(o => o.answererUserName === iceUserName);
 
-      if (!offerInOffers) {
-        // Find the index of the invalid offer
-        const index = offers.findIndex(offer => offer === offerInOffers);
-        if (index !== -1) {
-          // Remove the invalid offer from the array
-          offers.splice(index, 1);
-        }
-        console.log("Invalid offer removed: offererUserName is undefined or null");
-        return;
-      }
 
 
+
+      //erase it because of null on answerOffer offer
+      // if (!offerInOffers) {
+      //   // Find the index of the invalid offer
+      //   const index = offers.findIndex(offer => offer === offerInOffers);
+      //   if (index !== -1) {
+      //     // Remove the invalid offer from the array
+      //     offers.splice(index, 1);
+      //   }
+      //   console.log("Invalid offer removed: offererUserName is undefined or null");
+      //   return;
+      // }
+
+      offerInOffers.answererIceCandidates.push(iceCandidate)
 
       const socketFrom = connectedSockets.find(s => s.userName === offerInOffers.answererUserName);
 
@@ -497,6 +520,23 @@ io.on('connection', (socket) => {
 
 })
 
+let ongoingOffers = {}; // Object to track ongoing offers
+
+
+function shouldSendOffer(userA, userB) {
+  const offerKeyForward = `${userA}-${userB}`;
+  const offerKeyReverse = `${userB}-${userA}`;
+
+  // Check for existence in either direction
+  if (ongoingOffers[offerKeyForward] || ongoingOffers[offerKeyReverse]) {
+    console.log(`Offer already exists between ${userA} and ${userB}`);
+    return false;
+  }
+
+  // Mark this direction as having an ongoing offer
+  ongoingOffers[offerKeyForward] = true;
+  return true;
+}
 
 // Function to get all clients except for the specified client
 function getOtherClients(excludedClientId) {
@@ -504,6 +544,21 @@ function getOtherClients(excludedClientId) {
     .filter(([clientId]) => clientId !== excludedClientId)
     .map(([_, client]) => client.userName);
 }
+
+
+function removeOfferFromList(offererUserName, answererUserName) {
+  offers = offers.filter(offer =>
+    !(offer.offererUserName === offererUserName && offer.answererUserName === answererUserName));
+}
+
+function removeOfferTracking(offererUserName, answererUserName) {
+  const offerKeyForward = `${offererUserName}-${answererUserName}`;
+  const offerKeyReverse = `${answererUserName}-${offererUserName}`;
+
+  delete ongoingOffers[offerKeyForward];
+  delete ongoingOffers[offerKeyReverse];
+}
+
 
 
 
