@@ -308,14 +308,17 @@ io.on('connection', (socket) => {
       io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName });
 
 
-      const existingOffer = offers.find(offer =>
-        (offer.offererUserName === offererUserName && offer.answererUserName === answererUserName) ||
-        (offer.offererUserName === answererUserName && offer.answererUserName === offererUserName));
+      const existingOffer = offers.find(offer => {
+        offer.offererUserName === offererUserName
+        //&& offer.answererUserName === answererUserName) 
+        // ||
+        // (offer.offererUserName === answererUserName && offer.answererUserName === offererUserName)
+      });
 
-      // Process the answer...
-      removeOfferFromList(existingOffer.offererUserName, existingOffer.answererUserName)
-      removeOfferTracking(existingOffer.offererUserName, existingOffer.answererUserName);
-
+      if (existingOffer) {
+        removeOfferFromList(existingOffer.offererUserName, existingOffer.answererUserName)
+        removeOfferTracking(existingOffer.offererUserName, existingOffer.answererUserName);
+      }
     }
 
   });
@@ -447,11 +450,18 @@ io.on('connection', (socket) => {
   }
 
 
-  socket.on('sendCallEndedToServer', (userName) => {
+  socket.on('sendCallEndedToServer', async (userName) => {
     // Forward the 'callEnded' event to all other clients in the room
     //socket.to(userName).emit('callEnded', nameToClientIDMap.get(userName));
     socket.leave(roomName);
-    socket.broadcast.emit('callEnded', nameToClientIDMap.get(userName));
+
+    let sockets = await io.in(roomName).fetchSockets();
+
+    // if (sockets.length === 0)
+    //   socket.broadcast.emit('callEndedAndEmptyRoom');
+    // else
+    socket.broadcast.emit('callEnded', nameToClientIDMap.get(userName), userName);
+
   });
 
 
