@@ -307,9 +307,14 @@ io.on('connection', (socket) => {
       const offererSocketID = connectedSockets.find(s => s.userName === offererUserName).socketId;
       io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName });
 
+
+      const existingOffer = offers.find(offer =>
+        (offer.offererUserName === offererUserName && offer.answererUserName === answererUserName) ||
+        (offer.offererUserName === answererUserName && offer.answererUserName === offererUserName));
+
       // Process the answer...
-      removeOfferFromList(offer.offererUserName, offer.answererUserName)
-      removeOfferTracking(offer.offererUserName, offer.answererUserName);
+      removeOfferFromList(existingOffer.offererUserName, existingOffer.answererUserName)
+      removeOfferTracking(existingOffer.offererUserName, existingOffer.answererUserName);
 
     }
 
