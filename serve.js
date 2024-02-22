@@ -21,6 +21,7 @@ const path = require('path');
 // set up logging
 const { createLogger, format, transports } = require('winston');
 const { Console } = require('console');
+const { data } = require('browserslist');
 
 
 const { combine, timestamp, printf } = format;
@@ -118,7 +119,9 @@ io.on('connection', (socket) => {
 
   const userName = socket.handshake.auth.userName;
   const password = socket.handshake.auth.password;
-  const client_id = socket.handshake.auth.client_id;
+  let client_id = socket.handshake.auth.client_id;
+  if (!client_id)
+    client_id = Math.floor(Math.random() * 100000)
 
   nameToClientIDMap.set(userName, client_id);
 
@@ -188,19 +191,38 @@ io.on('connection', (socket) => {
   }
 
 
-  socket.on('newOffer', async (data) => {
+
+
+
+  socket.on('sendToClient', (data, ackFn) => {
+    let { targetClientId, message } = data;
+    // Ensure the target client exists
+
+    console.log("SEND TO CLIENT+++++++++++++++++++++++++");
+
+    targetClientId = connectedSockets.find(s => s.userName === targetClientId).socketId;
+
+    const targetSocket = io.sockets.sockets.get(targetClientId);
+
+    if (targetSocket) {
+      // Forward the message to the target client
+      targetSocket.emit('messageFromClient', { message, from: socket.id }, (response) => {
+        // Receive acknowledgment from Client B and relay back to Client A
+        if (ackFn) ackFn(response);
+      });
+    } else {
+      // Handle the case where the target client is not connected
+      if (ackFn) ackFn('Target client not found');
+    }
+  });
+
+
+  socket.on('newOffer', async (data, ackFn) => {
 
     // if (!shouldSendOffer(data.offererUserName, data.answererUserName)) {
     //   console.log(`Duplicate offer prevented between ${data.offererUserName} and ${data.answererUserName}`);
     //   return;
     // }
-
-    // if (!shouldSendOffer(data.offererUserName, data.answererUserName)) {
-
-    //   console.log("Offer already exists between these two users" + data.offererUserName + " " + data.answererUserName);
-    //   return;
-    // }
-
 
 
     let newOffer = {
@@ -211,6 +233,13 @@ io.on('connection', (socket) => {
 
       offererSocketID: socket.id,
       answererSocketID: connectedSockets.find(socket => socket.userName === data.answererUserName)?.socketId,
+
+
+      answererClientID: nameToClientIDMap.get(data.answererUserName),
+
+      offererClientID: nameToClientIDMap.get(data.offererUserName),
+
+
       offerIceCandidates: [],
       answer: null,
       answererIceCandidates: []
@@ -227,7 +256,7 @@ io.on('connection', (socket) => {
 
     let answererSocket = connectedSockets.find(socket => socket.userName === data.answererUserName);
 
-    let socketInfoOfferer = connectedSockets.find(socket => socket.userName === data.offererUserName);
+    //  let socketInfoOfferer = connectedSockets.find(socket => socket.userName === data.offererUserName);
 
     if (answererSocket) {
       console.log(`Socket ID for ${data.answererUserName} is ${answererSocket.socketId}`);
@@ -243,41 +272,56 @@ io.on('connection', (socket) => {
 
         io.to(answererSocket.socketId).emit('newOfferAwaiting2', {
           isForClientSync: data.isForClientSync,
-          newOffer: newOffer, offererSocketID: newOffer.offererSocketID, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
-        });
-
-        //  console.log("SENDING NEW OFFER AWAITING 2 --- offererSocketID " + newOffer.offererSocketID )
-
-        // const sockets = await io.in(roomName).fetchSockets();
-
-        // for (const s of sockets) {
-
-        //  s.emit('newOfferAwaiting', {
-        //     newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
-        //   });
-
-        // }
+          newOffer,
+          offererSocketID: newOffer.offererSocketID,
+          offererClientID: newOffer.offererClientID,
+          answererClientID: newOffer.answererClientID
+        },
+          (response) => {
+            // Receive acknowledgment from Client B and relay back to Client A
+            if (ackFn) ackFn(response);
+          }
 
 
 
-        //io.to(answererSocket.socketId).emit('receiveOffer', newOffer, newOffer.offererUserName) //, nameToClientIDMap.get(newOffer.offererUserName) );
 
+        );
 
-
-        // io.to(answererSocket.socketId).emit('newOfferAwaiting', {
-        //     newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
-        //   });
-
-        //  io.to(socketInfo.socketId).emit('acceptClientOffer', {offer: newOffer, isAnswer: true, offererClientID: nameToClientIDMap.get(data.offererUserName)});
-
-
-        //  io.to(socketInfo.socketInfoOfferer).emit('acceptClientOffer', {offer: newOffer, offererClientID: nameToClientIDMap.get(data.offererUserName)});
 
       } else {
 
-        io.to(answererSocket.socketId).emit('newOfferAwaiting', {
-          newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
-        });
+
+        const targetSocket = io.sockets.sockets.get(answererSocket.socketId);
+
+        targetSocket.emit('newOfferAwaiting', {
+          newOffer, offererClientID: newOffer.offererClientID
+        },
+          (response) => {
+            // Receive acknowledgment from Client B and relay back to Client A
+            if (ackFn) ackFn(response);
+          }
+        );
+
+        // io.to(answererSocket.socketId).emit('newOfferAwaiting', {
+        //   newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
+        // },);
+
+
+        //targetClientId = connectedSockets.find(s => s.userName === targetClientId).socketId;
+
+
+
+        // if (targetSocket) {
+        //   // Forward the message to the target client
+        //   targetSocket.emit('messageFromClient', { message, from: socket.id }, (response) => {
+        //     // Receive acknowledgment from Client B and relay back to Client A
+        //     if (ackFn) ackFn(response);
+        //   });
+        // } else {
+        //   // Handle the case where the target client is not connected
+        //   if (ackFn) ackFn('Target client not found');
+        // }
+
         // io.to(answererSocket.socketId).emit('newOfferAwaiting2', {
         //   newOffer: newOffer, offererClientID: nameToClientIDMap.get(newOffer.offererUserName)
         // });
@@ -323,16 +367,29 @@ io.on('connection', (socket) => {
 
   });
 
-  socket.on('roomCallClient', async (clientToAdd, clientsAlreadyConnectedTo, offer) => {
+  socket.on('roomCallClient', async (data) => {
 
-    clientsAlreadyConnectedTo.push(socket.id);
+    // data.clientToAdd, data.clientsAlreadyConnectedTo
 
+    let socketIDSet = new Set();
+    socketIDSet.add(socket.id);
+
+    data.clientsAlreadyConnectedTo.forEach(userName => {
+
+      console.log("CLIENTS IN REMOVE LIST" + userName)
+      let socketInfo = connectedSockets.find(socket => socket.userName === userName);
+      if (socketInfo) {
+        socketIDSet.add(socketInfo.socketId);
+      }
+    });
+
+    console.log("CLIENTS TO REMOVE FROM LIST" + socketIDSet.size)
 
     const sockets = await io.in(roomName).fetchSockets();
     console.log("NUMBER OF SOCKETS IN ROOM " + roomName + " " + sockets.length);
 
     // Create a new array that includes only the socket objects that are not in clientsAlreadyConnectedTo
-    let socketsNotConnected = sockets.filter(s => !clientsAlreadyConnectedTo.includes(s.id));
+    let socketsNotConnected = sockets.filter(s => !socketIDSet.has(s.id));
     console.log("NUMBER AFTER FILTER - NotConnected " + socketsNotConnected.length);
 
     for (const s of socketsNotConnected) {
@@ -341,7 +398,7 @@ io.on('connection', (socket) => {
 
         //   let socketInfo = connectedSockets.find(socket => socket.socketId === s.id);
         // console.log("SENDING CLIENT :  " + clientToAdd + " to client: " + socketInfo.userName);
-        io.to(s.id).emit('makeClientSendOffer', clientToAdd);
+        io.to(s.id).emit('makeClientSendOffer', data.clientToAdd);
 
 
       }, 1000);
@@ -349,15 +406,8 @@ io.on('connection', (socket) => {
 
     }
 
-    //check offerer client if it needs to sync
-    // if(otherClientID)
-    // io.to(otherClientID).emit('syncForOfferer', offer.offererUserName, offer);
-
-
-    // if(otherClientID){
-    //   io.to(otherClientID).emit('makeClientSendOffer', clientToAdd );
-    // }
   });
+
 
 
   socket.on('offerAnswered', (offer) => {
@@ -381,18 +431,18 @@ io.on('connection', (socket) => {
 
 
 
-  socket.on('newAnswer', async (offer, ackFunction) => {
+  socket.on('newAnswer', async (data, ackFunction) => {
     console.log("ANSWER RESOLVE+++++++++++++++++++++++++");
 
 
 
 
     // Join the clients to the room
-    const offererSocketObject = connectedSockets.find(client => client.userName === offer.offererUserName);
-    const answererSocketObject = connectedSockets.find(client => client.userName === offer.answererUserName);
+    const offererSocketObject = connectedSockets.find(client => client.userName === data.offer.offererUserName);
+    // const answererSocketObject = connectedSockets.find(client => client.userName === offer.answererUserName);
 
-    const offererSocket = io.sockets.sockets.get(offer.offererSocketID);//offererSocketObject.socketId);
-    const answererSocket = io.sockets.sockets.get(offer.answererSocketID);//answererSocketObject.socketId);
+    const offererSocket = io.sockets.sockets.get(data.offer.offererSocketID);//offererSocketObject.socketId);
+    const answererSocket = io.sockets.sockets.get(data.offer.answererSocketID);//answererSocketObject.socketId);
 
     //offer.roomName = roomName;
 
@@ -403,28 +453,68 @@ io.on('connection', (socket) => {
     if (offererSocket) offererSocket.roomName = roomName;
     if (answererSocket) answererSocket.roomName = roomName;
 
-
     // Emit the room name to the clients
-    if (offererSocket) offererSocket.emit('roomCreated', { roomName, nameToAdd: offer.answererUserName });
+    if (offererSocket) offererSocket.emit('roomCreated', { roomName, nameToAdd: data.offer.answererUserName, socketID: data.offer.answererSocketID });
 
-    if (answererSocket) answererSocket.emit('roomCreated', { roomName, nameToAdd: offer.offererUserName });
+    if (answererSocket) answererSocket.emit('roomCreated', { roomName, nameToAdd: data.offer.offererUserName, socketID: data.offer.offererSocketID });
 
 
-    const offerToUpdate = offers.find(o => o.offererUserName === offer.offererUserName)
+
+
+    const offerToUpdate = offers.find(o => o.offererUserName === data.offer.offererUserName)
     if (!offerToUpdate) {
       console.log("No OfferToUpdate")
       return;
     }
 
-    offerToUpdate.answer = offer.answer
-    offerToUpdate.answererUserName = offer.answererUserName
-    offerToUpdate.isForSync = offer.isForSync
+    offerToUpdate.answer = data.offer.answer
+    offerToUpdate.answererUserName = data.offer.answererUserName
+    offerToUpdate.isForSync = data.offer.isForSync
+    offerToUpdate.offererUserName = data.offer.offererUserName
 
-    offerToUpdate.offer = offer.offer;
+    // offerToUpdate.offer = data.offer.offer;
 
-    ackFunction(offer)//.offerIceCandidates);
+    ackFunction(data.offer)//.offerIceCandidates);
 
-    io.to(offererSocketObject.socketId).emit('answerResponse', { offer: offerToUpdate, offererClientID: nameToClientIDMap.get(offer.answererUserName) }); //, otherClientsInRoom });//, roomName: roomName});
+    io.to(offererSocketObject.socketId).emit('answerResponse', { offer: offerToUpdate, offererClientID: nameToClientIDMap.get(data.offer.answererUserName) }); //, otherClientsInRoom });//, roomName: roomName});
+
+
+
+
+    // // Fetch the sockets in the room
+    // const socketsInRoom = await io.in(roomName).fetchSockets();
+
+    // // Get the socket ids of the sockets in the room
+    // const socketIdsInRoom = socketsInRoom.map(socket => socket.id);
+
+    // if (!data.clients) return;
+    // // // Get the socket ids of the clients in the room from the Map
+    // // const socketIdsInClientsInRoom = Array.from(data.clients);
+
+    // let clientsArray = Array.from(data.clients);
+
+    // // Find out which sockets are not in the clientsInRoom Map
+    // let socketsNotInClientsInRoom = socketIdsInRoom.filter(socketId => !clientsArray.includes(socketId));
+
+    // // Remove offer.offererSocketID from the array
+    // socketsNotInClientsInRoom = socketsNotInClientsInRoom.filter(socketId => socketId !== data.offer.offererSocketID);
+    // socketsNotInClientsInRoom = socketsNotInClientsInRoom.filter(socketId => socketId !== data.offer.answererSocketID);
+    // console.log("SOCKETS NOT IN CLIENTS IN ROOM " + socketsNotInClientsInRoom.length);
+
+    // socketsNotInClientsInRoom.forEach(socketId => {
+    //   console.log("SENDING CLIENT CALL :  " + data.offer.answererUserName + " to client: " + socketId);
+    //   const socket = io.sockets.sockets.get(socketId);
+    //   if (socket) {
+    //     socket.emit('makeClientSendOffer',
+    //       data.offer.answererUserName // replace with the actual answererUserName
+    //     );
+    //   }
+    // });
+
+
+
+
+
 
     // Process the answer...
     // removeOfferFromList(offer.offererUserName, offer.answererUserName)
@@ -460,7 +550,7 @@ io.on('connection', (socket) => {
     // if (sockets.length === 0)
     //   socket.broadcast.emit('callEndedAndEmptyRoom');
     // else
-    socket.broadcast.emit('callEnded', nameToClientIDMap.get(userName), userName);
+    socket.broadcast.emit('callEnded', { clientID: nameToClientIDMap.get(userName), clientName: userName });
 
   });
 
@@ -514,7 +604,10 @@ io.on('connection', (socket) => {
       //   return;
       // }
 
-      offerInOffers.answererIceCandidates.push(iceCandidate)
+      // if (offerInOffers.answererIceCandidates === undefined)
+      //   offerInOffers.answererIceCandidates = [];
+
+      // offerInOffers.answererIceCandidates.push(iceCandidate)
 
       const socketFrom = connectedSockets.find(s => s.userName === offerInOffers.answererUserName);
 
@@ -605,6 +698,8 @@ let activeCalls = {};
 //     }
 //   }
 // }
+
+
 
 
 function getKeyByValue(map, searchValue) {
