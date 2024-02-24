@@ -174,6 +174,15 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('clientDisconnected', disconnectingClient.userName);
 
 
+
+
+
+
+
+
+
+
+
   });
 
 
@@ -338,7 +347,14 @@ io.on('connection', (socket) => {
 
   socket.on('requestRejectOffer', message => {
     if (message.type === 'offer-rejection') {
+
+
       const offererUserName = getKeyByValue(nameToClientIDMap, message.offererClientID);//message.offererUserName; // The username of the peer who made the offer
+
+
+      const answererClientID = nameToClientIDMap.get(message.answererUserName);//message.answererUserName; // The username of the peer who received the offer
+
+
 
       const reason = message.reason; // The reason for rejection
       console.log(`Call offer to ${offererUserName} was rejected: ${reason}`);
@@ -349,7 +365,7 @@ io.on('connection', (socket) => {
       //offers = offers.filter(offer => !(offer.offererUserName === offererUserName && offer.answererUserName === message.answererUserName));
 
       const offererSocketID = connectedSockets.find(s => s.userName === offererUserName).socketId;
-      io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName });
+      io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName, answererClientID, offererClientID: message.offererClientID });
 
 
       const existingOffer = offers.find(offer => {
@@ -543,14 +559,29 @@ io.on('connection', (socket) => {
   socket.on('sendCallEndedToServer', async (userName) => {
     // Forward the 'callEnded' event to all other clients in the room
     //socket.to(userName).emit('callEnded', nameToClientIDMap.get(userName));
-    socket.leave(roomName);
+
+    await socket.leave(roomName);
 
     let sockets = await io.in(roomName).fetchSockets();
 
-    // if (sockets.length === 0)
-    //   socket.broadcast.emit('callEndedAndEmptyRoom');
-    // else
+
     socket.broadcast.emit('callEnded', { clientID: nameToClientIDMap.get(userName), clientName: userName });
+
+    // Check if only one socket is left in the room or if it's empty
+    if (sockets.length <= 1) {
+      // If the room is empty or has one remaining client, notify that client or perform a global action as needed
+      socket.broadcast.emit('callEndedAndEmptyRoom'); // This will send to the remaining clients in the room
+    }
+
+    //else {
+    // If there are more than one clients, notify others that a client has ended the call
+    socket.broadcast.emit('callEnded', { clientID: nameToClientIDMap.get(userName), clientName: userName });
+    // }
+
+
+    // else
+    // socket.broadcast.emit('callEnded', { clientID: nameToClientIDMap.get(userName), clientName: userName });
+
 
   });
 
