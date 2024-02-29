@@ -364,8 +364,16 @@ io.on('connection', (socket) => {
       // Remove the offer from the offers array
       //offers = offers.filter(offer => !(offer.offererUserName === offererUserName && offer.answererUserName === message.answererUserName));
 
-      const offererSocketID = connectedSockets.find(s => s.userName === offererUserName).socketId;
-      io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName, answererClientID, offererClientID: message.offererClientID });
+
+      const offererSocket = connectedSockets.find(s => s.userName === offererUserName);
+
+      if (offererSocket) {
+        const offererSocketID = offererSocket.socketID
+        io.to(offererSocketID).emit('rejectedClientOffer', { offererUserName, reason, answererUserName: message.answererUserName, answererClientID, offererClientID: message.offererClientID });
+      }
+      else {
+        console.log("offererSocket not found - not in scene?")
+      }
 
 
       const existingOffer = offers.find(offer => {
@@ -417,7 +425,7 @@ io.on('connection', (socket) => {
         io.to(s.id).emit('makeClientSendOffer', data.clientToAdd);
 
 
-      }, 1000);
+      }, 3000);
 
 
     }
@@ -624,16 +632,16 @@ io.on('connection', (socket) => {
 
 
       //erase it because of null on answerOffer offer
-      // if (!offerInOffers) {
-      //   // Find the index of the invalid offer
-      //   const index = offers.findIndex(offer => offer === offerInOffers);
-      //   if (index !== -1) {
-      //     // Remove the invalid offer from the array
-      //     offers.splice(index, 1);
-      //   }
-      //   console.log("Invalid offer removed: offererUserName is undefined or null");
-      //   return;
-      // }
+      if (!offerInOffers) {
+        // Find the index of the invalid offer
+        const index = offers.findIndex(offer => offer === offerInOffers);
+        if (index !== -1) {
+          // Remove the invalid offer from the array
+          offers.splice(index, 1);
+        }
+        console.log("Invalid offer removed: offererUserName is undefined or null");
+        return;
+      }
 
       // if (offerInOffers.answererIceCandidates === undefined)
       //   offerInOffers.answererIceCandidates = [];
