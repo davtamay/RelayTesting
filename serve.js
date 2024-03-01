@@ -502,44 +502,6 @@ io.on('connection', (socket) => {
 
     io.to(offererSocketObject.socketId).emit('answerResponse', { offer: offerToUpdate, offererClientID: nameToClientIDMap.get(data.offer.answererUserName) }); //, otherClientsInRoom });//, roomName: roomName});
 
-
-
-
-    // // Fetch the sockets in the room
-    // const socketsInRoom = await io.in(roomName).fetchSockets();
-
-    // // Get the socket ids of the sockets in the room
-    // const socketIdsInRoom = socketsInRoom.map(socket => socket.id);
-
-    // if (!data.clients) return;
-    // // // Get the socket ids of the clients in the room from the Map
-    // // const socketIdsInClientsInRoom = Array.from(data.clients);
-
-    // let clientsArray = Array.from(data.clients);
-
-    // // Find out which sockets are not in the clientsInRoom Map
-    // let socketsNotInClientsInRoom = socketIdsInRoom.filter(socketId => !clientsArray.includes(socketId));
-
-    // // Remove offer.offererSocketID from the array
-    // socketsNotInClientsInRoom = socketsNotInClientsInRoom.filter(socketId => socketId !== data.offer.offererSocketID);
-    // socketsNotInClientsInRoom = socketsNotInClientsInRoom.filter(socketId => socketId !== data.offer.answererSocketID);
-    // console.log("SOCKETS NOT IN CLIENTS IN ROOM " + socketsNotInClientsInRoom.length);
-
-    // socketsNotInClientsInRoom.forEach(socketId => {
-    //   console.log("SENDING CLIENT CALL :  " + data.offer.answererUserName + " to client: " + socketId);
-    //   const socket = io.sockets.sockets.get(socketId);
-    //   if (socket) {
-    //     socket.emit('makeClientSendOffer',
-    //       data.offer.answererUserName // replace with the actual answererUserName
-    //     );
-    //   }
-    // });
-
-
-
-
-
-
     // Process the answer...
     // removeOfferFromList(offer.offererUserName, offer.answererUserName)
     // removeOfferTracking(offer.offererUserName, offer.answererUserName);
@@ -547,8 +509,22 @@ io.on('connection', (socket) => {
   })
 
 
+  let nameToDeviceType = new Map();
 
+  socket.on('setDeviceType', ({ userName, deviceType }) => {
 
+    nameToDeviceType.set(userName, deviceType);
+    console.log("Device type set for " + userName + " " + deviceType);
+
+  })
+
+  socket.on('callClientFromServer', async ({ userName, sendToUserName, isForClientSync, restartIce }) => {
+
+    console.log("CALL CLIENT FROM SERVER+++++++++++++++++++++++++" + userName + " " + sendToUserName);
+    sendToUserDeviceType = nameToDeviceType[sendToUserName];
+    socket.emit('receiveCallClientFromServer', { userName, sendToUserName, isForClientSync, restartIce, sendToUserDeviceType });
+
+  });
 
   socket.on('sendAnswer', (data) => {
     console.log("SEND ANSWER+++++++++++++++++++++++++" + data.fromUserName);
