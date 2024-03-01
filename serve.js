@@ -20,8 +20,6 @@ const path = require('path');
 
 // set up logging
 const { createLogger, format, transports } = require('winston');
-const { Console } = require('console');
-const { data } = require('browserslist');
 
 
 const { combine, timestamp, printf } = format;
@@ -517,7 +515,22 @@ io.on('connection', (socket) => {
     nameToDeviceType.set(userName, deviceType);
     console.log("Device type set for " + userName + " " + deviceType);
 
+
   })
+
+
+  socket.on('checkPeerDeviceType', (videoId, callback) => {
+    // Check if something has value
+    let deviceType = nameToDeviceType.get(videoId); // Replace this with your actual function
+
+    if (deviceType == 0)
+      callback(true);
+    else
+      callback(false);
+    // deviceType = hasValue ? hasValue : "unknown
+    // Call the callback with the result
+
+  });
 
   socket.on('callClientFromServer', async ({ userName, sendToUserName, isForClientSync, restartIce }) => {
 
@@ -527,6 +540,7 @@ io.on('connection', (socket) => {
     socket.emit('receiveCallClientFromServer', { userName, sendToUserName, isForClientSync, restartIce, sendToUserDeviceType });
 
   });
+
 
   socket.on('sendAnswer', (data) => {
     console.log("SEND ANSWER+++++++++++++++++++++++++" + data.fromUserName);
@@ -644,6 +658,8 @@ io.on('connection', (socket) => {
   })
 
 })
+
+
 
 let ongoingOffers = {}; // Object to track ongoing offers
 
