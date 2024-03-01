@@ -520,8 +520,9 @@ io.on('connection', (socket) => {
 
   socket.on('callClientFromServer', async ({ userName, sendToUserName, isForClientSync, restartIce }) => {
 
-    console.log("CALL CLIENT FROM SERVER+++++++++++++++++++++++++" + userName + " " + sendToUserName);
-    sendToUserDeviceType = nameToDeviceType[sendToUserName];
+
+    sendToUserDeviceType = nameToDeviceType.get(sendToUserName);
+    console.log("CALL CLIENT FROM SERVER+++++++++++++++++++++++++" + userName + " " + sendToUserName + " " + sendToUserDeviceType);
     socket.emit('receiveCallClientFromServer', { userName, sendToUserName, isForClientSync, restartIce, sendToUserDeviceType });
 
   });
