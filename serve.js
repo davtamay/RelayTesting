@@ -107,6 +107,7 @@ let connectedSockets = [
 
 
 let nameToClientIDMap = new Map();
+let nameToDeviceType = new Map();
 
 
 io.on('connection', (socket) => {
@@ -509,7 +510,7 @@ io.on('connection', (socket) => {
   })
 
 
-  let nameToDeviceType = new Map();
+
 
   socket.on('setDeviceType', ({ userName, deviceType }) => {
 
@@ -522,7 +523,7 @@ io.on('connection', (socket) => {
 
 
     let sendToUserDeviceType = nameToDeviceType.get(sendToUserName);
-    console.log("CALL CLIENT FROM SERVER+++++++++++++++++++++++++" + userName + " " + sendToUserName + " " + sendToUserDeviceType);
+    console.log("CALL CLIENT FROM SERVER+++++++++++++++++++++++++ " + userName + " " + sendToUserName + " " + sendToUserDeviceType);
     socket.emit('receiveCallClientFromServer', { userName, sendToUserName, isForClientSync, restartIce, sendToUserDeviceType });
 
   });
