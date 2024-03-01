@@ -519,14 +519,17 @@ io.on('connection', (socket) => {
   })
 
 
-  socket.on('checkPeerDeviceType', (videoId, callback) => {
+  socket.on('checkPeerDeviceType', (videoId, ackFunction) => {
     // Check if something has value
     let deviceType = nameToDeviceType.get(videoId); // Replace this with your actual function
 
     if (deviceType == 0)
-      callback(true);
+
+      ackFunction(true)
+    //callback(true);
     else
-      callback(false);
+      ackFunction(false)
+    //callback(false);
     // deviceType = hasValue ? hasValue : "unknown
     // Call the callback with the result
 
